@@ -1,37 +1,98 @@
 import { defineStore } from 'pinia';
 
-import { loginRequest } from '../api/auth.service';
+import {
+  loginRequest,
+  logoutRequest,
+  meRequest,
+  refreshRequest,
+  registerRequest,
+} from '../api/auth.service';
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: null,
-    token: localStorage.getItem('token') || null,
+    accessToken: localStorage.getItem('accessToken') || null,
+    refreshToken: localStorage.getItem('refreshToken') || null,
+    initialized: false,
   }),
 
   getters: {
-    isAuthenticated: (state) => !!state.token,
+    isAuthenticated: (state) => !!state.accessToken,
   },
 
   actions: {
+    persistSession(data) {
+      this.user = data.user || null;
+      this.accessToken = data.accessToken || null;
+      this.refreshToken = data.refreshToken || this.refreshToken;
+
+      if (this.accessToken) {
+        localStorage.setItem('accessToken', this.accessToken);
+      }
+
+      if (this.refreshToken) {
+        localStorage.setItem('refreshToken', this.refreshToken);
+      }
+    },
+
+    clearSession() {
+      this.user = null;
+      this.accessToken = null;
+      this.refreshToken = null;
+
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+    },
+
+    async initialize() {
+      if (this.initialized) return;
+
+      if (!this.accessToken) {
+        this.initialized = true;
+        return;
+      }
+
+      try {
+        const response = await meRequest();
+        this.user = response.data.user;
+      } catch (error) {
+        if (this.refreshToken) {
+          try {
+            const response = await refreshRequest(this.refreshToken);
+            this.persistSession(response.data);
+          } catch (refreshError) {
+            this.clearSession();
+          }
+        } else {
+          this.clearSession();
+        }
+      } finally {
+        this.initialized = true;
+      }
+    },
+
     async login(credentials) {
       const response = await loginRequest(credentials);
 
-      this.user = response.data.user;
-
-      this.token = response.data.token;
-
-      localStorage.setItem(
-        'token',
-        response.data.token
-      );
+      this.persistSession(response.data);
     },
 
-    logout() {
-      this.user = null;
+    async register(payload) {
+      const response = await registerRequest(payload);
 
-      this.token = null;
+      this.user = response.data.user;
 
-      localStorage.removeItem('token');
+      return response.data.user;
+    },
+
+    async logout() {
+      try {
+        if (this.accessToken) {
+          await logoutRequest();
+        }
+      } finally {
+        this.clearSession();
+      }
     },
   },
 });

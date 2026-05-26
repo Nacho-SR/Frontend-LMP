@@ -1,21 +1,50 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
-import LoginView from '../views/LoginView.vue';
-
+import { useAuthStore } from '../stores/auth.store';
+import ProtectedLayout from '../components/layout/ProtectedLayout.vue';
 import DashboardView from '../views/DashboardView.vue';
+import LoginView from '../views/LoginView.vue';
+import RegisterView from '../views/RegisterView.vue';
+import TeamDetailView from '../views/TeamDetailView.vue';
+import TeamsView from '../views/TeamsView.vue';
 
 const routes = [
   {
     path: '/login',
+    name: 'login',
     component: LoginView,
   },
 
   {
+    path: '/register',
+    name: 'register',
+    component: RegisterView,
+  },
+
+  {
     path: '/',
-    component: DashboardView,
+    component: ProtectedLayout,
     meta: {
       requiresAuth: true,
     },
+    children: [
+      {
+        path: '',
+        name: 'dashboard',
+        component: DashboardView,
+      },
+      {
+        path: 'teams',
+        name: 'teams',
+        component: TeamsView,
+      },
+      {
+        path: 'teams/:teamId',
+        name: 'team-detail',
+        component: TeamDetailView,
+        props: true,
+      },
+    ],
   },
 ];
 
@@ -24,11 +53,25 @@ const router = createRouter({
   routes,
 });
 
-router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('token');
+router.beforeEach(async (to, from, next) => {
+  const authStore = useAuthStore();
 
-  if (to.meta.requiresAuth && !token) {
-    return next('/login');
+  await authStore.initialize();
+
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    return next({
+      name: 'login',
+      query: {
+        redirect: to.fullPath,
+      },
+    });
+  }
+
+  if (
+    (to.name === 'login' || to.name === 'register') &&
+    authStore.isAuthenticated
+  ) {
+    return next({ name: 'dashboard' });
   }
 
   next();

@@ -11,3 +11,23 @@ export const registerRequest = async (data) => {
 
   return response.data;
 };
+
+export const meRequest = async () => {
+  const response = await api.get('/auth/me');
+
+  return response.data;
+};
+
+export const refreshRequest = async (refreshToken) => {
+  const response = await api.post('/auth/refresh', {
+    refreshToken,
+  });
+
+  return response.data;
+};
+
+export const logoutRequest = async () => {
+  const response = await api.post('/auth/logout');
+
+  return response.data;
+};

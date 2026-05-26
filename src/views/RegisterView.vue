@@ -1,32 +1,33 @@
 <script setup>
 import { reactive, ref } from 'vue';
-import { RouterLink, useRoute, useRouter } from 'vue-router';
+import { RouterLink, useRouter } from 'vue-router';
 
 import { useAuthStore } from '../stores/auth.store';
 
 const authStore = useAuthStore();
-const route = useRoute();
 const router = useRouter();
 const loading = ref(false);
 const errorMessage = ref('');
 
 const form = reactive({
+  displayName: '',
+  userName: '',
   email: '',
   password: '',
 });
 
-const handleLogin = async () => {
+const handleRegister = async () => {
   try {
     loading.value = true;
     errorMessage.value = '';
 
-    await authStore.login(form);
+    await authStore.register(form);
 
-    router.push(route.query.redirect || '/');
+    router.push({ name: 'login' });
   } catch (error) {
     errorMessage.value =
       error.response?.data?.message ||
-      'Error al iniciar sesion';
+      'No se pudo crear la cuenta';
   } finally {
     loading.value = false;
   }
@@ -41,11 +42,35 @@ const handleLogin = async () => {
           TaskFlow
         </p>
         <h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
-          Iniciar sesion
+          Crear cuenta
         </h1>
       </div>
 
-      <form @submit.prevent="handleLogin">
+      <form @submit.prevent="handleRegister">
+        <div class="form-field">
+          <label for="displayName">Nombre</label>
+          <input
+            id="displayName"
+            v-model="form.displayName"
+            type="text"
+            required
+            minlength="3"
+            class="text-input"
+          />
+        </div>
+
+        <div class="form-field">
+          <label for="userName">Usuario</label>
+          <input
+            id="userName"
+            v-model="form.userName"
+            type="text"
+            required
+            minlength="3"
+            class="text-input"
+          />
+        </div>
+
         <div class="form-field">
           <label for="email">Email</label>
           <input
@@ -64,9 +89,9 @@ const handleLogin = async () => {
             id="password"
             v-model="form.password"
             type="password"
-            autocomplete="current-password"
-            minlength="6"
+            autocomplete="new-password"
             required
+            minlength="6"
             class="text-input"
           />
         </div>
@@ -83,17 +108,17 @@ const handleLogin = async () => {
           :disabled="loading"
           class="primary-button w-full"
         >
-          {{ loading ? 'Ingresando...' : 'Iniciar sesion' }}
+          {{ loading ? 'Creando...' : 'Crear cuenta' }}
         </button>
       </form>
 
       <p class="mt-6 text-center text-sm text-slate-600">
-        No tienes cuenta?
+        Ya tienes cuenta?
         <RouterLink
-          :to="{ name: 'register' }"
+          :to="{ name: 'login' }"
           class="font-medium text-slate-950 underline underline-offset-4"
         >
-          Crear cuenta
+          Iniciar sesion
         </RouterLink>
       </p>
     </section>
