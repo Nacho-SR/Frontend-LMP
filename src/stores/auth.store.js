@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 
 import {
+  changePasswordRequest,
   loginRequest,
   logoutRequest,
   meRequest,
@@ -54,7 +55,7 @@ export const useAuthStore = defineStore('auth', {
 
       try {
         const response = await meRequest();
-        this.user = response.data.user;
+        this.user = response.data;
       } catch (error) {
         if (this.refreshToken) {
           try {
@@ -80,9 +81,9 @@ export const useAuthStore = defineStore('auth', {
     async register(payload) {
       const response = await registerRequest(payload);
 
-      this.user = response.data.user;
+      this.user = response.data;
 
-      return response.data.user;
+      return response.data;
     },
 
     async logout() {
@@ -93,6 +94,10 @@ export const useAuthStore = defineStore('auth', {
       } finally {
         this.clearSession();
       }
+    },
+
+    async changePassword(payload) {
+      await changePasswordRequest(payload);
     },
   },
 });

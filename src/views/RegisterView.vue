@@ -25,9 +25,12 @@ const handleRegister = async () => {
 
     router.push({ name: 'login' });
   } catch (error) {
-    errorMessage.value =
-      error.response?.data?.message ||
-      'No se pudo crear la cuenta';
+    const code = error.response?.data?.error?.code;
+    const errorMap = {
+      EMAIL_ALREADY_IN_USE: 'Ya existe una cuenta con ese email',
+      USERNAME_ALREADY_IN_USE: 'Ese nombre de usuario ya está en uso',
+    };
+    errorMessage.value = errorMap[code] || error.response?.data?.message || 'No se pudo crear la cuenta';
   } finally {
     loading.value = false;
   }

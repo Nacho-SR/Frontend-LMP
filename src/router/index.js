@@ -4,7 +4,11 @@ import { useAuthStore } from '../stores/auth.store';
 import ProtectedLayout from '../components/layout/ProtectedLayout.vue';
 import DashboardView from '../views/DashboardView.vue';
 import LoginView from '../views/LoginView.vue';
+import NotificationsView from '../views/NotificationsView.vue';
+import ProfileView from '../views/ProfileView.vue';
+import ProjectsView from '../views/ProjectsView.vue';
 import RegisterView from '../views/RegisterView.vue';
+import TasksView from '../views/TasksView.vue';
 import TeamDetailView from '../views/TeamDetailView.vue';
 import TeamsView from '../views/TeamsView.vue';
 
@@ -43,6 +47,26 @@ const routes = [
         name: 'team-detail',
         component: TeamDetailView,
         props: true,
+      },
+      {
+        path: 'projects',
+        name: 'projects',
+        component: ProjectsView,
+      },
+      {
+        path: 'tasks',
+        name: 'tasks',
+        component: TasksView,
+      },
+      {
+        path: 'notifications',
+        name: 'notifications',
+        component: NotificationsView,
+      },
+      {
+        path: 'profile',
+        name: 'profile',
+        component: ProfileView,
       },
     ],
   },

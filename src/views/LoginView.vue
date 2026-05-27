@@ -24,9 +24,13 @@ const handleLogin = async () => {
 
     router.push(route.query.redirect || '/');
   } catch (error) {
-    errorMessage.value =
-      error.response?.data?.message ||
-      'Error al iniciar sesion';
+    const code = error.response?.data?.error?.code;
+    const errorMap = {
+      INVALID_CREDENTIALS: 'Email o contraseña incorrectos',
+      ACCOUNT_LOCKED: 'Cuenta bloqueada por demasiados intentos fallidos. Contacta al administrador.',
+      USER_NOT_FOUND: 'No existe una cuenta con ese email',
+    };
+    errorMessage.value = errorMap[code] || error.response?.data?.message || 'Error al iniciar sesión';
   } finally {
     loading.value = false;
   }
