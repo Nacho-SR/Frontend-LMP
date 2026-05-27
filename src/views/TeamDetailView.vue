@@ -23,7 +23,9 @@ const teamsStore = useTeamsStore();
 
 const pageError = ref('');
 const addError = ref('');
+const addSuccess = ref('');
 const removeError = ref('');
+const removeSuccess = ref('');
 const adding = ref(false);
 
 const memberForm = reactive({ userId: '', role: 'MEMBER' });
@@ -77,9 +79,11 @@ const handleAddMember = async () => {
   try {
     adding.value = true;
     addError.value = '';
+    addSuccess.value = '';
     await teamsStore.addMember(props.teamId, memberForm);
     memberForm.userId = '';
     memberForm.role = 'MEMBER';
+    addSuccess.value = 'Miembro agregado correctamente';
   } catch (error) {
     addError.value = mapError(error, 'No se pudo agregar el miembro');
   } finally {
@@ -97,9 +101,11 @@ const handleRemoveMember = async () => {
   try {
     confirm.loading = true;
     removeError.value = '';
+    removeSuccess.value = '';
     await teamsStore.removeMember(props.teamId, confirm.userId);
     confirm.open = false;
     confirm.userId = null;
+    removeSuccess.value = 'Miembro eliminado del equipo';
   } catch (error) {
     confirm.open = false;
     removeError.value = mapError(error, 'No se pudo quitar al miembro');
@@ -186,6 +192,7 @@ watch(() => props.teamId, loadTeam);
           </div>
         </div>
 
+        <AlertMessage v-if="removeSuccess" type="success" :message="removeSuccess" class="m-4 mt-0" />
         <AlertMessage v-if="removeError" type="error" :message="removeError" class="m-4 mt-0" />
       </div>
 
@@ -214,6 +221,7 @@ watch(() => props.teamId, loadTeam);
             />
           </div>
 
+          <AlertMessage v-if="addSuccess" type="success" :message="addSuccess" class="mt-3" />
           <AlertMessage v-if="addError" type="error" :message="addError" class="mt-3" />
 
           <BaseButton type="submit" :loading="adding" class="mt-4 w-full">
