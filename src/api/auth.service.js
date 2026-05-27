@@ -31,3 +31,9 @@ export const logoutRequest = async () => {
 
   return response.data;
 };
+
+export const changePasswordRequest = async (data) => {
+  const response = await api.patch('/auth/change-password', data);
+
+  return response.data;
+};
