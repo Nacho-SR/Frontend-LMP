@@ -1,21 +1,77 @@
 <script setup>
+import { onMounted, reactive, ref } from 'vue';
+import { RouterLink } from 'vue-router';
+
+import AlertMessage from '../components/ui/AlertMessage.vue';
+import BaseButton from '../components/ui/BaseButton.vue';
+import BaseInput from '../components/ui/BaseInput.vue';
+import BaseTextarea from '../components/ui/BaseTextarea.vue';
+import EmptyState from '../components/ui/EmptyState.vue';
+import LoadingState from '../components/ui/LoadingState.vue';
+import PageHeader from '../components/ui/PageHeader.vue';
+import StatusBadge from '../components/ui/StatusBadge.vue';
+import { useNotificationsStore } from '../stores/notifications.store';
+
+const notificationsStore = useNotificationsStore();
+const createError = ref('');
+const joinError = ref('');
+
+
+const mapError = (error, fallback) => {
+  const code = error.response?.data?.error?.code;
+  return JOIN_ERRORS[code] || error.response?.data?.message || fallback;
+};
+
+
+
+
+onMounted(() => notificationsStore.fetchNotifications());
 </script>
 
 <template>
   <section class="space-y-6">
-    <div>
-      <p class="text-sm font-medium text-slate-500">Bandeja</p>
-      <h1 class="mt-1 text-2xl font-semibold tracking-tight text-slate-950">Notificaciones</h1>
-    </div>
+    <PageHeader title="Bandeja" subtitle="Notificaciones" />
 
-    <div class="rounded-lg border border-slate-200 bg-white p-12 text-center shadow-sm">
-      <div class="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-slate-100">
-        <svg class="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-        </svg>
+    <div class="grid gap-6 xl:grid-cols-[1fr_360px]">
+      <!-- Lista de notificaciones -->
+      <div>
+        <LoadingState v-if="notificationsStore.loading" message="Cargando notificationes..." />
+
+        <div
+          v-else-if="!notificationsStore.notifications.length"
+          class="rounded-lg border border-slate-200 bg-white shadow-sm"
+        >
+          <EmptyState
+            title="Sin notificaciones"
+            description="Aun no tienes notificaciones."
+          >
+            <template #icon>
+              <svg class="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </template>
+          </EmptyState>
+        </div>
+
+        <div v-else class="grid gap-4 md:grid-cols-2">
+          <article
+            v-for="notification in notificationsStore.notifications"
+            :key="notification.id"
+            class="flex flex-col rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <h2 class="truncate text-base font-semibold text-slate-950">
+                {{ notification.title }}
+              </h2>
+            </div>
+
+            <p class="mt-2 line-clamp-2 flex-1 text-sm text-slate-600">
+              {{ notification.body|| 'Sin descripción' }}
+            </p>
+
+          </article>
+        </div>
       </div>
-      <p class="text-sm font-medium text-slate-950">Sin notificaciones</p>
-      <p class="mt-1 text-sm text-slate-500">Aquí aparecerán tus notificaciones cuando estén disponibles.</p>
     </div>
   </section>
 </template>
