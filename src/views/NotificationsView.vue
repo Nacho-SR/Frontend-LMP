@@ -57,14 +57,35 @@ const handleToggleRead = async (notificationID, newStatus) => {
   }
 };
 
+const handleReadAll = async () => {
+
+  try {
+    isModifying.value = true;
+    errorMessage.value = '';
+    await notificationsStore.readAllNotifications();
+    statusMessage.value = `Notifications read successfully`;
+  } catch (error) {
+    errorMessage.value = mapError(error, `Notifications couldn\'t be read`);
+  } finally {
+    isModifying.value = false;
+  }
+};
+
 onMounted(() => notificationsStore.fetchNotifications());
 
 </script>
 
 <template>
   <section class="space-y-6">
-    <PageHeader title="Bandeja" subtitle="Notificaciones" />
-
+      <div class="flex items-end justify-between border-b border-gray-100 pb-4 mb-6">
+        <div>
+          <PageHeader title="Bandeja" subtitle="Notificaciones" class="m-0" />
+        </div>
+        
+        <button @click="handleReadAll()" class="rounded-lg px-5 py-2 text-b font-semibold text-orange-700 bg-orange-50 hover:bg-orange-100 transition-colors border border-orange-200 shadow-sm">
+          Read All
+        </button>
+    </div>
     <div class="grid gap-6">
       <div>
         <LoadingState v-if="notificationsStore.loading" message="Cargando notificationes..." />

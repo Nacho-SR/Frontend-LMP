@@ -12,6 +12,12 @@ export const getNotificationRequest = async (notifId) =>
 
   return response.data;
 }
+export const readAllNotificationsRequest = async () =>
+{
+  const response = await api.patch(`/notifications/read-all`);
+
+  return response.data;
+}
 
 export const deleteNotification = async (notifId) => {
   const response = await api.delete(`/notifications/${notifId}`);
