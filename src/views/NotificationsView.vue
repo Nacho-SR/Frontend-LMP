@@ -47,7 +47,6 @@ const handleToggleRead = async (notificationID, newStatus) => {
     isModifying.value = true;
     errorMessage.value = '';
     await notificationsStore.toggleReadNotification(notificationID,newStatus?'read':'unread');
-    await notificationsStore.fetchNotifications();
     statusMessage.value = `Notification ${newStatus?'read':'unread'} successfully`;
   } catch (error) {
     errorMessage.value = mapError(error, `Notification couldn\'t be ${newStatus?'read':'unread'}`);

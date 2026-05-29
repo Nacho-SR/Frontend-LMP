@@ -6,6 +6,12 @@ export const getNotificationsRequest = async (data) =>
 
   return response.data;
 }
+export const getNotificationRequest = async (notifId) =>
+{
+  const response = await api.get(`/notifications/${notifId}`);
+
+  return response.data;
+}
 
 export const deleteNotification = async (notifId) => {
   const response = await api.delete(`/notifications/${notifId}`);
