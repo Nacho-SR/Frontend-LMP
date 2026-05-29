@@ -10,6 +10,7 @@ import ProjectDetailView from '../views/ProjectDetailView.vue';
 import ProjectsView from '../views/ProjectsView.vue';
 import RegisterView from '../views/RegisterView.vue';
 import TasksView from '../views/TasksView.vue';
+import KanbanView from '../views/KanbanView.vue';
 import TeamDetailView from '../views/TeamDetailView.vue';
 import TeamsView from '../views/TeamsView.vue';
 
@@ -58,6 +59,12 @@ const routes = [
         path: 'projects/:projectId',
         name: 'project-detail',
         component: ProjectDetailView,
+        props: true,
+      },
+      {
+        path: 'projects/:projectId/kanban/:chartId',
+        name: 'kanban',
+        component: KanbanView,
         props: true,
       },
       {

@@ -11,6 +11,7 @@ import LoadingState from '../components/ui/LoadingState.vue';
 import PageHeader from '../components/ui/PageHeader.vue';
 import StatusBadge from '../components/ui/StatusBadge.vue';
 import { useAuthStore } from '../stores/auth.store';
+import { useChartsStore } from '../stores/charts.store';
 import { useProjectsStore } from '../stores/projects.store';
 import { useTeamsStore } from '../stores/teams.store';
 
@@ -20,12 +21,26 @@ const router = useRouter();
 const authStore = useAuthStore();
 const projectsStore = useProjectsStore();
 const teamsStore = useTeamsStore();
+const chartsStore = useChartsStore();
 
 const pageError = ref('');
 const editError = ref('');
 const editSuccess = ref('');
 const statusError = ref('');
 const deleteError = ref('');
+
+// Charts
+const projectCharts = computed(() =>
+  chartsStore.charts.filter((c) => c.projectId === props.projectId && !c.isArchived)
+);
+const showCreateChart = ref(false);
+const newChartName = ref('');
+const creatingChart = ref(false);
+const chartError = ref('');
+const editingChartId = ref(null);
+const editingChartName = ref('');
+const savingChartId = ref(null);
+const archiveConfirm = reactive({ open: false, chartId: null, loading: false });
 
 const editing = ref(false);
 const savingEdit = ref(false);
@@ -58,6 +73,8 @@ const ERRORS = {
   PROJECT_NOT_FOUND: 'Proyecto no encontrado',
   UNAUTHORIZED_TEAM_ACCESS: 'No tienes acceso a este proyecto',
   INSUFFICIENT_TEAM_ROLE: 'Tu rol no permite esta acción',
+  CHART_NOT_FOUND: 'Tablero no encontrado',
+  PROJECT_TEAM_MISMATCH: 'El proyecto no pertenece a este equipo',
 };
 
 const mapError = (error, fallback) => {
@@ -70,10 +87,65 @@ const loadProject = async () => {
     pageError.value = '';
     await projectsStore.fetchProject(props.projectId);
     if (project.value) {
-      await teamsStore.fetchMembers(project.value.teamId);
+      await Promise.all([
+        teamsStore.fetchMembers(project.value.teamId),
+        chartsStore.fetchCharts(),
+      ]);
     }
   } catch (error) {
     pageError.value = mapError(error, 'No se pudo cargar el proyecto');
+  }
+};
+
+const handleCreateChart = async () => {
+  if (!newChartName.value.trim()) return;
+  try {
+    creatingChart.value = true;
+    chartError.value = '';
+    await chartsStore.createChart({
+      name: newChartName.value.trim(),
+      projectId: props.projectId,
+      teamId: project.value.teamId,
+    });
+    newChartName.value = '';
+    showCreateChart.value = false;
+  } catch (error) {
+    chartError.value = mapError(error, 'No se pudo crear el tablero');
+  } finally {
+    creatingChart.value = false;
+  }
+};
+
+const openEditChart = (chart) => {
+  editingChartId.value = chart.id;
+  editingChartName.value = chart.name;
+};
+
+const handleSaveChart = async (chartId) => {
+  if (!editingChartName.value.trim()) return;
+  try {
+    savingChartId.value = chartId;
+    chartError.value = '';
+    await chartsStore.updateChart(chartId, { name: editingChartName.value.trim() });
+    editingChartId.value = null;
+  } catch (error) {
+    chartError.value = mapError(error, 'No se pudo actualizar el tablero');
+  } finally {
+    savingChartId.value = null;
+  }
+};
+
+const handleArchiveChart = async () => {
+  try {
+    archiveConfirm.loading = true;
+    await chartsStore.archiveChart(archiveConfirm.chartId);
+    archiveConfirm.open = false;
+    archiveConfirm.chartId = null;
+  } catch (error) {
+    chartError.value = mapError(error, 'No se pudo archivar el tablero');
+    archiveConfirm.open = false;
+  } finally {
+    archiveConfirm.loading = false;
   }
 };
 
@@ -158,6 +230,110 @@ watch(() => props.projectId, loadProject);
     <LoadingState v-if="projectsStore.projectLoading" message="Cargando proyecto..." />
 
     <template v-else-if="project">
+      <!-- Tableros (Charts) -->
+      <div>
+        <div class="mb-3 flex items-center justify-between">
+          <h2 class="text-base font-semibold text-slate-950">Tableros</h2>
+          <button
+            v-if="canEdit && !showCreateChart"
+            type="button"
+            class="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+            @click="showCreateChart = true"
+          >
+            + Nuevo tablero
+          </button>
+        </div>
+
+        <AlertMessage v-if="chartError" type="error" :message="chartError" class="mb-3" />
+
+        <!-- Formulario crear -->
+        <div v-if="showCreateChart" class="mb-4 flex gap-2 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <BaseInput
+            id="new-chart-name"
+            v-model="newChartName"
+            label=""
+            placeholder="Nombre del tablero"
+            class="flex-1"
+            @keyup.enter="handleCreateChart"
+          />
+          <BaseButton :loading="creatingChart" @click="handleCreateChart">Crear</BaseButton>
+          <button
+            type="button"
+            class="secondary-button"
+            @click="showCreateChart = false; newChartName = ''"
+          >
+            Cancelar
+          </button>
+        </div>
+
+        <LoadingState v-if="chartsStore.loading" message="Cargando tableros..." />
+
+        <div v-else-if="projectCharts.length === 0 && !showCreateChart" class="rounded-lg border border-dashed border-slate-200 bg-white p-6 text-center text-sm text-slate-400">
+          Este proyecto no tiene tableros. {{ canEdit ? 'Crea uno para empezar.' : '' }}
+        </div>
+
+        <div v-else class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div
+            v-for="chart in projectCharts"
+            :key="chart.id"
+            class="flex flex-col justify-between rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
+          >
+            <!-- Nombre / edición inline -->
+            <div v-if="editingChartId === chart.id" class="flex gap-2">
+              <input
+                v-model="editingChartName"
+                class="flex-1 rounded border border-slate-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                @keyup.enter="handleSaveChart(chart.id)"
+                @keyup.escape="editingChartId = null"
+              />
+              <button
+                type="button"
+                class="text-xs font-medium text-indigo-600 hover:text-indigo-700"
+                :disabled="savingChartId === chart.id"
+                @click="handleSaveChart(chart.id)"
+              >
+                {{ savingChartId === chart.id ? '...' : 'Guardar' }}
+              </button>
+              <button type="button" class="text-xs text-slate-400 hover:text-slate-600" @click="editingChartId = null">
+                Cancelar
+              </button>
+            </div>
+            <div v-else>
+              <p class="font-medium text-slate-950">{{ chart.name }}</p>
+              <p class="mt-0.5 text-xs text-slate-400">
+                {{ (chart.stageIds || []).length }} etapa{{ (chart.stageIds || []).length !== 1 ? 's' : '' }}
+              </p>
+            </div>
+
+            <!-- Acciones -->
+            <div class="mt-4 flex items-center gap-2">
+              <RouterLink
+                :to="{ name: 'kanban', params: { projectId, chartId: chart.id } }"
+                class="flex-1 rounded bg-indigo-600 px-3 py-1.5 text-center text-sm font-medium text-white hover:bg-indigo-700"
+              >
+                Abrir tablero
+              </RouterLink>
+              <template v-if="canEdit && editingChartId !== chart.id">
+                <button
+                  type="button"
+                  class="rounded px-2 py-1.5 text-xs text-slate-500 hover:bg-slate-100"
+                  @click="openEditChart(chart)"
+                >
+                  Renombrar
+                </button>
+                <button
+                  type="button"
+                  class="rounded px-2 py-1.5 text-xs text-red-500 hover:bg-red-50"
+                  @click="archiveConfirm.open = true; archiveConfirm.chartId = chart.id"
+                >
+                  Archivar
+                </button>
+              </template>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="grid gap-6 xl:grid-cols-[1fr_320px]">
         <!-- Resumen de tareas -->
         <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
@@ -274,6 +450,17 @@ watch(() => props.projectId, loadProject);
       :loading="deleteConfirm.loading"
       @confirm="handleDelete"
       @cancel="deleteConfirm.open = false"
+    />
+
+    <ConfirmDialog
+      :open="archiveConfirm.open"
+      title="¿Archivar tablero?"
+      description="El tablero y sus etapas quedarán archivados. Las tareas no se eliminan."
+      confirm-label="Archivar"
+      confirm-variant="danger"
+      :loading="archiveConfirm.loading"
+      @confirm="handleArchiveChart"
+      @cancel="archiveConfirm.open = false; archiveConfirm.chartId = null"
     />
   </section>
 </template>
