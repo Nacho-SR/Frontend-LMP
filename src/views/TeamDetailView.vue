@@ -11,6 +11,7 @@ import EmptyState from '../components/ui/EmptyState.vue';
 import LoadingState from '../components/ui/LoadingState.vue';
 import PageHeader from '../components/ui/PageHeader.vue';
 import StatusBadge from '../components/ui/StatusBadge.vue';
+import { fetchUserList } from '../api/users.service';
 import { useAuthStore } from '../stores/auth.store';
 import { useTeamsStore } from '../stores/teams.store';
 
@@ -28,7 +29,48 @@ const removeError = ref('');
 const removeSuccess = ref('');
 const adding = ref(false);
 
-const memberForm = reactive({ userId: '', role: 'MEMBER' });
+const allUsers = ref([]);
+const usersLoading = ref(false);
+const userFilter = ref('');
+const selectedUser = ref(null);
+const selectedRole = ref('MEMBER');
+
+const filteredUsers = computed(() => {
+  const currentId = authStore.user?.id;
+  const base = allUsers.value.filter((u) => u.id !== currentId);
+  const q = userFilter.value.trim().toLowerCase();
+  if (!q) return base;
+  return base.filter(
+    (u) =>
+      u.displayName?.toLowerCase().includes(q) ||
+      u.userName?.toLowerCase().includes(q),
+  );
+});
+
+const selectUser = (user) => {
+  selectedUser.value = user;
+  addError.value = '';
+  addSuccess.value = '';
+};
+
+const resetForm = () => {
+  selectedUser.value = null;
+  selectedRole.value = 'MEMBER';
+  userFilter.value = '';
+  addError.value = '';
+};
+
+const loadUsers = async () => {
+  try {
+    usersLoading.value = true;
+    const response = await fetchUserList();
+    allUsers.value = response.data || [];
+  } catch {
+    allUsers.value = [];
+  } finally {
+    usersLoading.value = false;
+  }
+};
 
 const confirm = reactive({ open: false, userId: null, loading: false });
 
@@ -76,14 +118,14 @@ const loadTeam = async () => {
 };
 
 const handleAddMember = async () => {
+  if (!selectedUser.value) return;
   try {
     adding.value = true;
     addError.value = '';
     addSuccess.value = '';
-    await teamsStore.addMember(props.teamId, memberForm);
-    memberForm.userId = '';
-    memberForm.role = 'MEMBER';
-    addSuccess.value = 'Miembro agregado correctamente';
+    await teamsStore.addMember(props.teamId, { userId: selectedUser.value.id, role: selectedRole.value });
+    addSuccess.value = `${selectedUser.value.displayName} fue agregado al equipo`;
+    resetForm();
   } catch (error) {
     addError.value = mapError(error, 'No se pudo agregar el miembro');
   } finally {
@@ -114,8 +156,8 @@ const handleRemoveMember = async () => {
   }
 };
 
-onMounted(loadTeam);
-watch(() => props.teamId, loadTeam);
+onMounted(() => { loadTeam(); loadUsers(); });
+watch(() => props.teamId, () => { loadTeam(); resetForm(); });
 </script>
 
 <template>
@@ -198,36 +240,78 @@ watch(() => props.teamId, loadTeam);
 
       <!-- Agregar miembro (solo OWNER/MANAGER) -->
       <div>
-        <form
+        <div
           v-if="canAddMembers"
-          class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
-          @submit.prevent="handleAddMember"
+          class="flex flex-col rounded-lg border border-slate-200 bg-white shadow-sm"
         >
-          <h2 class="text-base font-semibold text-slate-950">Agregar miembro</h2>
+          <div class="border-b border-slate-200 px-5 py-4">
+            <h2 class="text-base font-semibold text-slate-950">Agregar miembro</h2>
+          </div>
 
-          <div class="mt-4 space-y-1">
+          <!-- Barra de búsqueda -->
+          <div class="px-4 pt-3">
             <BaseInput
-              id="member-user-id"
-              v-model="memberForm.userId"
-              label="ID de usuario"
-              required
-              placeholder="Pega el ID del usuario"
-            />
-            <BaseSelect
-              id="member-role"
-              v-model="memberForm.role"
-              label="Rol"
-              :options="roleOptions"
+              id="user-filter"
+              v-model="userFilter"
+              placeholder="Buscar por nombre o usuario…"
+              :disabled="usersLoading"
             />
           </div>
 
-          <AlertMessage v-if="addSuccess" type="success" :message="addSuccess" class="mt-3" />
-          <AlertMessage v-if="addError" type="error" :message="addError" class="mt-3" />
+          <!-- Lista de usuarios -->
+          <div class="mt-2 max-h-56 overflow-y-auto divide-y divide-slate-100">
+            <LoadingState v-if="usersLoading" message="Cargando usuarios…" />
 
-          <BaseButton type="submit" :loading="adding" class="mt-4 w-full">
-            Agregar
-          </BaseButton>
-        </form>
+            <EmptyState
+              v-else-if="userFilter.trim() && !filteredUsers.length"
+              title="Sin resultados"
+              description="No hay usuarios que coincidan."
+            />
+
+            <button
+              v-for="user in filteredUsers"
+              :key="user.id"
+              type="button"
+              :class="[
+                'flex w-full items-center justify-between px-4 py-2.5 text-left transition-colors',
+                selectedUser?.id === user.id
+                  ? 'bg-indigo-50'
+                  : 'hover:bg-slate-50',
+              ]"
+              @click="selectUser(user)"
+            >
+              <div class="min-w-0">
+                <p class="truncate text-sm font-medium text-slate-950">{{ user.displayName }}</p>
+                <p class="truncate text-xs text-slate-400">@{{ user.userName }}</p>
+              </div>
+              <svg
+                v-if="selectedUser?.id === user.id"
+                class="ml-2 h-4 w-4 shrink-0 text-indigo-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Rol + botón agregar (solo cuando hay usuario seleccionado) -->
+          <div v-if="selectedUser" class="border-t border-slate-100 px-4 pb-4 pt-3 space-y-3">
+            <div class="flex items-center gap-2 rounded-lg bg-indigo-50 px-3 py-2">
+              <p class="flex-1 truncate text-sm font-medium text-indigo-900">{{ selectedUser.displayName }}</p>
+              <button type="button" class="text-xs text-indigo-400 hover:text-indigo-600" @click="resetForm">✕</button>
+            </div>
+            <BaseSelect id="member-role" v-model="selectedRole" label="Rol" :options="roleOptions" />
+            <AlertMessage v-if="addError" type="error" :message="addError" />
+            <BaseButton :loading="adding" class="w-full" @click="handleAddMember">Agregar</BaseButton>
+          </div>
+
+          <div v-if="addSuccess" class="px-4 pb-4">
+            <AlertMessage type="success" :message="addSuccess" />
+          </div>
+        </div>
 
         <!-- Aviso si no tiene permisos -->
         <div
