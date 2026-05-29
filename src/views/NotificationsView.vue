@@ -14,7 +14,6 @@ import { useNotificationsStore } from '../stores/notifications.store';
 
 const notificationsStore = useNotificationsStore();
 
-
 const isDeleting = ref(false); 
 const isModifying = ref(false);
 const statusMessage = ref('');
@@ -59,6 +58,7 @@ const handleToggleRead = async (notificationID, newStatus) => {
 };
 
 onMounted(() => notificationsStore.fetchNotifications());
+
 </script>
 
 <template>
@@ -92,9 +92,9 @@ onMounted(() => notificationsStore.fetchNotifications());
                     {{ notification.title }}
                   </h2>
                   <span :class="notification.read ? 'text-slate-600' : 'text-slate-200'" class="text-xs whitespace-nowrap pt-0.5">
-                    {{formatTimestamp(notification.createdAt) }}
+                    {{formatTimestamp(notification.createdAt) }} <checkmark v-if="notification.read">🗸</checkmark>
                   </span>
-                  
+
                 </div>
                 <p 
                   :class="notification.read ? 'text-slate-400' : 'text-slate-600'"
@@ -112,7 +112,10 @@ onMounted(() => notificationsStore.fetchNotifications());
                     notification.read ? 'bg-gray-600 hover:bg-gray-700' : 'bg-blue-600 hover:bg-blue-700']">
                   {{ notification.read ? 'Mark as Unread' : 'Mark as Read' }}
                 </button>
-                <button @click="handleDelete(notification.id)" class="rounded bg-red-600 px-2 py-1 text-sm font-medium text-white hover:bg-red-700">
+                <button @click="handleDelete(notification.id)" 
+                :class="[
+                    'rounded px-2 py-1 text-sm font-medium text-white transition-colors',
+                    notification.read ? 'bg-orange-800 hover:bg-orange-900' : 'bg-red-600 hover:bg-red-700']">
                   Delete
                 </button>
               </div>
