@@ -91,7 +91,7 @@ onMounted(() => notificationsStore.fetchNotifications());
                   >
                     {{ notification.title }}
                   </h2>
-                  <span class="text-xs text-slate-400 whitespace-nowrap pt-0.5">
+                  <span :class="notification.read ? 'text-slate-600' : 'text-slate-200'" class="text-xs whitespace-nowrap pt-0.5">
                     {{formatTimestamp(notification.createdAt) }}
                   </span>
                   
