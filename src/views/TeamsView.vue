@@ -13,10 +13,15 @@ import StatusBadge from '../components/ui/StatusBadge.vue';
 import { useTeamsStore } from '../stores/teams.store';
 
 const teamsStore = useTeamsStore();
+const activeForm = ref(null); // 'create' | 'join' | null
 const createError = ref('');
 const joinError = ref('');
 const creating = ref(false);
 const joining = ref(false);
+
+const toggleForm = (form) => {
+  activeForm.value = activeForm.value === form ? null : form;
+};
 
 const createForm = reactive({ name: '', description: '', password: '' });
 const joinForm = reactive({ teamId: '', password: '' });
@@ -41,6 +46,7 @@ const handleCreateTeam = async () => {
     createForm.name = '';
     createForm.description = '';
     createForm.password = '';
+    activeForm.value = null;
   } catch (error) {
     createError.value = mapError(error, 'No se pudo crear el equipo');
   } finally {
@@ -55,6 +61,7 @@ const handleJoinTeam = async () => {
     await teamsStore.joinTeam(joinForm.teamId, { password: joinForm.password });
     joinForm.teamId = '';
     joinForm.password = '';
+    activeForm.value = null;
   } catch (error) {
     joinError.value = mapError(error, 'No se pudo unir al equipo');
   } finally {
@@ -69,7 +76,7 @@ onMounted(() => teamsStore.fetchTeams());
   <section class="space-y-6">
     <PageHeader title="Equipos" subtitle="Colaboración" />
 
-    <div class="grid gap-6 xl:grid-cols-[1fr_360px]">
+    <div class="space-y-6">
       <!-- Lista de equipos -->
       <div>
         <LoadingState v-if="teamsStore.loading" message="Cargando equipos..." />
@@ -122,16 +129,43 @@ onMounted(() => teamsStore.fetchTeams());
         </div>
       </div>
 
-      <!-- Formularios laterales -->
-      <aside class="space-y-4">
+      <!-- Botones y formularios -->
+      <div class="space-y-3">
+        <!-- Botones -->
+        <div class="flex gap-2">
+          <button
+            type="button"
+            :class="[
+              'flex-1 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors',
+              activeForm === 'create'
+                ? 'border-indigo-600 bg-indigo-600 text-white'
+                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+            ]"
+            @click="toggleForm('create')"
+          >
+            + Crear equipo
+          </button>
+          <button
+            type="button"
+            :class="[
+              'flex-1 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors',
+              activeForm === 'join'
+                ? 'border-indigo-600 bg-indigo-600 text-white'
+                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+            ]"
+            @click="toggleForm('join')"
+          >
+            Unirse
+          </button>
+        </div>
+
         <!-- Crear equipo -->
         <form
+          v-if="activeForm === 'create'"
           class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
           @submit.prevent="handleCreateTeam"
         >
-          <h2 class="text-base font-semibold text-slate-950">Crear equipo</h2>
-
-          <div class="mt-4 space-y-1">
+          <div class="space-y-1">
             <BaseInput id="team-name" v-model="createForm.name" label="Nombre" required />
             <BaseTextarea id="team-desc" v-model="createForm.description" label="Descripción" :rows="2" />
             <BaseInput id="team-password" v-model="createForm.password" label="Contraseña de acceso" type="password" minlength="6" required />
@@ -146,12 +180,11 @@ onMounted(() => teamsStore.fetchTeams());
 
         <!-- Unirse a equipo -->
         <form
+          v-if="activeForm === 'join'"
           class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
           @submit.prevent="handleJoinTeam"
         >
-          <h2 class="text-base font-semibold text-slate-950">Unirse a equipo</h2>
-
-          <div class="mt-4 space-y-1">
+          <div class="space-y-1">
             <BaseInput id="join-id" v-model="joinForm.teamId" label="ID del equipo" required />
             <BaseInput id="join-password" v-model="joinForm.password" label="Contraseña" type="password" minlength="6" required />
           </div>
@@ -162,7 +195,7 @@ onMounted(() => teamsStore.fetchTeams());
             Unirse
           </BaseButton>
         </form>
-      </aside>
+      </div>
     </div>
   </section>
 </template>
