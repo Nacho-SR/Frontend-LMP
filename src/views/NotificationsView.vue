@@ -14,17 +14,19 @@ import { useNotificationsStore } from '../stores/notifications.store';
 
 const notificationsStore = useNotificationsStore();
 
-
 const isDeleting = ref(false); 
 const isModifying = ref(false);
 const statusMessage = ref('');
 const errorMessage = ref('');
 
 
-const mapError = (error, fallback) => {
-  return error.response?.data?.message || fallback;
+const formatTimestamp = (timestamp) => {  
+  const date = new Date(timestamp._seconds * 1000);
+  return date.toLocaleString(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  });
 };
-
 const handleDelete = async (notificationID) => {
   if (!confirm('Are you sure you want to delete this notification?')) return;
 
@@ -55,13 +57,35 @@ const handleToggleRead = async (notificationID, newStatus) => {
   }
 };
 
+const handleReadAll = async () => {
+
+  try {
+    isModifying.value = true;
+    errorMessage.value = '';
+    await notificationsStore.readAllNotifications();
+    statusMessage.value = `Notifications read successfully`;
+  } catch (error) {
+    errorMessage.value = mapError(error, `Notifications couldn\'t be read`);
+  } finally {
+    isModifying.value = false;
+  }
+};
+
 onMounted(() => notificationsStore.fetchNotifications());
+
 </script>
 
 <template>
   <section class="space-y-6">
-    <PageHeader title="Bandeja" subtitle="Notificaciones" />
-
+      <div class="flex items-end justify-between border-b border-gray-100 pb-4 mb-6">
+        <div>
+          <PageHeader title="Bandeja" subtitle="Notificaciones" class="m-0" />
+        </div>
+        
+        <button @click="handleReadAll" class="rounded-lg px-5 py-2 text-b font-semibold text-orange-700 bg-orange-50 hover:bg-orange-100 transition-colors border border-orange-200 shadow-sm">
+          Read All
+        </button>
+    </div>
     <div class="grid gap-6">
       <div>
         <LoadingState v-if="notificationsStore.loading" message="Cargando notificationes..." />
@@ -88,6 +112,10 @@ onMounted(() => notificationsStore.fetchNotifications());
                   >
                     {{ notification.title }}
                   </h2>
+                  <span :class="notification.read ? 'text-slate-600' : 'text-slate-200'" class="text-xs whitespace-nowrap pt-0.5">
+                    {{formatTimestamp(notification.createdAt) }} <checkmark v-if="notification.read">🗸</checkmark>
+                  </span>
+
                 </div>
                 <p 
                   :class="notification.read ? 'text-slate-400' : 'text-slate-600'"
@@ -105,7 +133,10 @@ onMounted(() => notificationsStore.fetchNotifications());
                     notification.read ? 'bg-gray-600 hover:bg-gray-700' : 'bg-blue-600 hover:bg-blue-700']">
                   {{ notification.read ? 'Mark as Unread' : 'Mark as Read' }}
                 </button>
-                <button @click="handleDelete(notification.id)" class="rounded bg-red-600 px-2 py-1 text-sm font-medium text-white hover:bg-red-700">
+                <button @click="handleDelete(notification.id)" 
+                :class="[
+                    'rounded px-2 py-1 text-sm font-medium text-white transition-colors',
+                    notification.read ? 'bg-orange-800 hover:bg-orange-900' : 'bg-red-600 hover:bg-red-700']">
                   Delete
                 </button>
               </div>

@@ -44,6 +44,21 @@ export const useNotificationsStore = defineStore('notifications', {
         this.loading = false;
       }
     },
+    async readAllNotifications() {
+      this.loading = true;
+
+      try {
+        const readAll = await notificationsService.readAllNotificationsRequest();
+        this.fetchNotifications();
+      } 
+      catch (error) {
+        console.error("Failed to read notifications: ", error);
+        throw error;
+      } 
+      finally {
+        this.loading = false;
+      }
+    },
     async deleteNotification(notifId) {
       try {
         await notificationsService.deleteNotification(notifId);
