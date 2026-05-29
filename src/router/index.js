@@ -6,6 +6,7 @@ import DashboardView from '../views/DashboardView.vue';
 import LoginView from '../views/LoginView.vue';
 import NotificationsView from '../views/NotificationsView.vue';
 import ProfileView from '../views/ProfileView.vue';
+import ProjectDetailView from '../views/ProjectDetailView.vue';
 import ProjectsView from '../views/ProjectsView.vue';
 import RegisterView from '../views/RegisterView.vue';
 import TasksView from '../views/TasksView.vue';
@@ -52,6 +53,12 @@ const routes = [
         path: 'projects',
         name: 'projects',
         component: ProjectsView,
+      },
+      {
+        path: 'projects/:projectId',
+        name: 'project-detail',
+        component: ProjectDetailView,
+        props: true,
       },
       {
         path: 'tasks',
