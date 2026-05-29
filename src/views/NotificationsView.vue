@@ -1,21 +1,118 @@
 <script setup>
+import { onMounted, reactive, ref } from 'vue';
+import { RouterLink } from 'vue-router';
+
+import AlertMessage from '../components/ui/AlertMessage.vue';
+import BaseButton from '../components/ui/BaseButton.vue';
+import BaseInput from '../components/ui/BaseInput.vue';
+import BaseTextarea from '../components/ui/BaseTextarea.vue';
+import EmptyState from '../components/ui/EmptyState.vue';
+import LoadingState from '../components/ui/LoadingState.vue';
+import PageHeader from '../components/ui/PageHeader.vue';
+import StatusBadge from '../components/ui/StatusBadge.vue';
+import { useNotificationsStore } from '../stores/notifications.store';
+
+const notificationsStore = useNotificationsStore();
+
+
+const isDeleting = ref(false); 
+const isModifying = ref(false);
+const statusMessage = ref('');
+const errorMessage = ref('');
+
+
+const mapError = (error, fallback) => {
+  return error.response?.data?.message || fallback;
+};
+
+const handleDelete = async (notificationID) => {
+  if (!confirm('Are you sure you want to delete this notification?')) return;
+
+  try {
+    isDeleting.value = true;
+    errorMessage.value = '';
+    
+    await notificationsStore.deleteNotification(notificationID);
+    
+    statusMessage.value = "Notification deleted successfully";
+  } catch (error) {
+    errorMessage.value = mapError(error, 'Notification couldn\'t be deleted');
+  } finally {
+    isDeleting.value = false;
+  }
+};
+const handleToggleRead = async (notificationID, newStatus) => {
+
+  try {
+    isModifying.value = true;
+    errorMessage.value = '';
+    await notificationsStore.toggleReadNotification(notificationID,newStatus?'read':'unread');
+    statusMessage.value = `Notification ${newStatus?'read':'unread'} successfully`;
+  } catch (error) {
+    errorMessage.value = mapError(error, `Notification couldn\'t be ${newStatus?'read':'unread'}`);
+  } finally {
+    isModifying.value = false;
+  }
+};
+
+onMounted(() => notificationsStore.fetchNotifications());
 </script>
 
 <template>
   <section class="space-y-6">
-    <div>
-      <p class="text-sm font-medium text-slate-500">Bandeja</p>
-      <h1 class="mt-1 text-2xl font-semibold tracking-tight text-slate-950">Notificaciones</h1>
-    </div>
+    <PageHeader title="Bandeja" subtitle="Notificaciones" />
 
-    <div class="rounded-lg border border-slate-200 bg-white p-12 text-center shadow-sm">
-      <div class="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-slate-100">
-        <svg class="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-        </svg>
+    <div class="grid gap-6">
+      <div>
+        <LoadingState v-if="notificationsStore.loading" message="Cargando notificationes..." />
+
+        <div
+          v-else-if="!notificationsStore.notifications.length"
+          class="rounded-lg border border-slate-200 bg-white shadow-sm"
+        >
+          <EmptyState title="Sin notificaciones" description="Aun no tienes notificaciones.">
+            </EmptyState>
+        </div>
+
+        <div v-else class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div class="grid divide-y divide-slate-100"> <article
+              v-for="notification in notificationsStore.notifications"
+              :key="notification.id"
+              class="flex flex-col justify-between p-5 transition-colors hover:bg-slate-50"
+            >
+              <div>
+                <div class="flex items-start justify-between">
+                  <h2 
+                    :class="notification.read ? 'text-slate-400' : 'text-slate-950'"
+                    class="truncate text-base font-semibold"
+                  >
+                    {{ notification.title }}
+                  </h2>
+                </div>
+                <p 
+                  :class="notification.read ? 'text-slate-400' : 'text-slate-600'"
+                  class="mt-2 flex-1 text-sm"
+                >
+                  {{ notification.body || 'Sin descripción' }}
+                </p>
+              </div>
+              
+              <div class="gap-1 flex justify-end mt-4">
+                <button 
+                  @click="handleToggleRead(notification.id, !notification.read)"
+                  :class="[
+                    'rounded px-2 py-1 text-sm font-medium text-white transition-colors',
+                    notification.read ? 'bg-gray-600 hover:bg-gray-700' : 'bg-blue-600 hover:bg-blue-700']">
+                  {{ notification.read ? 'Mark as Unread' : 'Mark as Read' }}
+                </button>
+                <button @click="handleDelete(notification.id)" class="rounded bg-red-600 px-2 py-1 text-sm font-medium text-white hover:bg-red-700">
+                  Delete
+                </button>
+              </div>
+            </article>
+          </div>
+        </div>
       </div>
-      <p class="text-sm font-medium text-slate-950">Sin notificaciones</p>
-      <p class="mt-1 text-sm text-slate-500">Aquí aparecerán tus notificaciones cuando estén disponibles.</p>
     </div>
   </section>
 </template>
