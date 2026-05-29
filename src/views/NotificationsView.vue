@@ -82,7 +82,7 @@ onMounted(() => notificationsStore.fetchNotifications());
           <PageHeader title="Bandeja" subtitle="Notificaciones" class="m-0" />
         </div>
         
-        <button @click="handleReadAll()" class="rounded-lg px-5 py-2 text-b font-semibold text-orange-700 bg-orange-50 hover:bg-orange-100 transition-colors border border-orange-200 shadow-sm">
+        <button @click="handleReadAll" class="rounded-lg px-5 py-2 text-b font-semibold text-orange-700 bg-orange-50 hover:bg-orange-100 transition-colors border border-orange-200 shadow-sm">
           Read All
         </button>
     </div>
