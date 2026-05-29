@@ -21,10 +21,13 @@ const statusMessage = ref('');
 const errorMessage = ref('');
 
 
-const mapError = (error, fallback) => {
-  return error.response?.data?.message || fallback;
+const formatTimestamp = (timestamp) => {  
+  const date = new Date(timestamp._seconds * 1000);
+  return date.toLocaleString(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  });
 };
-
 const handleDelete = async (notificationID) => {
   if (!confirm('Are you sure you want to delete this notification?')) return;
 
@@ -88,6 +91,10 @@ onMounted(() => notificationsStore.fetchNotifications());
                   >
                     {{ notification.title }}
                   </h2>
+                  <span class="text-xs text-slate-400 whitespace-nowrap pt-0.5">
+                    {{formatTimestamp(notification.createdAt) }}
+                  </span>
+                  
                 </div>
                 <p 
                   :class="notification.read ? 'text-slate-400' : 'text-slate-600'"
