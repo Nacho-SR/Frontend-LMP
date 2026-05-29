@@ -17,6 +17,7 @@ import { useTeamsStore } from '../stores/teams.store';
 const projectsStore = useProjectsStore();
 const teamsStore = useTeamsStore();
 
+const listError = ref('');
 const createError = ref('');
 const createSuccess = ref('');
 const creating = ref(false);
@@ -59,7 +60,11 @@ const handleCreate = async () => {
 onMounted(async () => {
   await teamsStore.fetchTeams();
   if (teamOptions.value.length) createForm.teamId = teamOptions.value[0].value;
-  projectsStore.fetchProjects();
+  try {
+    await projectsStore.fetchProjects();
+  } catch {
+    listError.value = 'No se pudieron cargar los proyectos';
+  }
 });
 </script>
 
@@ -70,10 +75,11 @@ onMounted(async () => {
     <div class="grid gap-6 xl:grid-cols-[1fr_360px]">
       <!-- Lista de proyectos -->
       <div>
+        <AlertMessage v-if="listError" type="error" :message="listError" class="mb-4" />
         <LoadingState v-if="projectsStore.loading" message="Cargando proyectos..." />
 
         <div
-          v-else-if="!projectsStore.projects.length"
+          v-else-if="!projectsStore.projects.length && !listError"
           class="rounded-lg border border-slate-200 bg-white shadow-sm"
         >
           <EmptyState

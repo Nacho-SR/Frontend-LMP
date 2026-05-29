@@ -30,6 +30,7 @@ export const useProjectsStore = defineStore('projects', {
 
     async fetchProject(projectId) {
       this.projectLoading = true;
+      this.selectedProject = null;
       try {
         const response = await getProjectRequest(projectId);
         this.selectedProject = response.data;
