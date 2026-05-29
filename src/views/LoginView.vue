@@ -1,7 +1,8 @@
 <script setup>
-import { reactive, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 
+import AlertMessage from '../components/ui/AlertMessage.vue';
 import { useAuthStore } from '../stores/auth.store';
 
 const authStore = useAuthStore();
@@ -9,13 +10,34 @@ const route = useRoute();
 const router = useRouter();
 const loading = ref(false);
 const errorMessage = ref('');
+const rateLimitSeconds = ref(0);
 
 const form = reactive({
   email: '',
   password: '',
 });
 
+const isRateLimited = computed(() => rateLimitSeconds.value > 0);
+const isDisabled = computed(() => loading.value || isRateLimited.value);
+
+let countdownInterval = null;
+let rateLimitHits = 0;
+
+const startCountdown = (seconds) => {
+  rateLimitSeconds.value = seconds;
+  clearInterval(countdownInterval);
+  countdownInterval = setInterval(() => {
+    rateLimitSeconds.value -= 1;
+    if (rateLimitSeconds.value <= 0) {
+      clearInterval(countdownInterval);
+      rateLimitHits = 0;
+      errorMessage.value = '';
+    }
+  }, 1000);
+};
+
 const handleLogin = async () => {
+  if (isDisabled.value) return;
   try {
     loading.value = true;
     errorMessage.value = '';
@@ -25,12 +47,23 @@ const handleLogin = async () => {
     router.push(route.query.redirect || '/');
   } catch (error) {
     const code = error.response?.data?.error?.code;
-    const errorMap = {
-      INVALID_CREDENTIALS: 'Email o contraseña incorrectos',
-      ACCOUNT_LOCKED: 'Cuenta bloqueada por demasiados intentos fallidos. Contacta al administrador.',
-      USER_NOT_FOUND: 'No existe una cuenta con ese email',
-    };
-    errorMessage.value = errorMap[code] || error.response?.data?.message || 'Error al iniciar sesión';
+    if (code === 'RATE_LIMIT_EXCEEDED') {
+      const seconds = error.response?.data?.error?.details?.[0]?.retryAfterSeconds ?? 60;
+      rateLimitHits += 1;
+      if (rateLimitHits >= 2) {
+        startCountdown(seconds);
+        errorMessage.value = `Demasiados intentos. Espera ${seconds} segundos antes de volver a intentarlo.`;
+      } else {
+        errorMessage.value = 'Demasiados intentos. Espera un momento antes de volver a intentarlo.';
+      }
+    } else {
+      const errorMap = {
+        INVALID_CREDENTIALS: 'Email o contraseña incorrectos',
+        ACCOUNT_LOCKED: 'Cuenta bloqueada por demasiados intentos fallidos. Contacta al administrador.',
+        USER_NOT_FOUND: 'No existe una cuenta con ese email',
+      };
+      errorMessage.value = errorMap[code] || error.response?.data?.message || 'Error al iniciar sesión';
+    }
   } finally {
     loading.value = false;
   }
@@ -75,19 +108,19 @@ const handleLogin = async () => {
           />
         </div>
 
-        <p
+        <AlertMessage
           v-if="errorMessage"
-          class="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
-        >
-          {{ errorMessage }}
-        </p>
+          type="error"
+          :message="errorMessage + (isRateLimited ? ` Podrás intentarlo en ${rateLimitSeconds}s.` : '')"
+          class="mb-4"
+        />
 
         <button
           type="submit"
-          :disabled="loading"
+          :disabled="isDisabled"
           class="primary-button w-full"
         >
-          {{ loading ? 'Ingresando...' : 'Iniciar sesion' }}
+          {{ loading ? 'Ingresando...' : isRateLimited ? `Espera ${rateLimitSeconds}s` : 'Iniciar sesion' }}
         </button>
       </form>
 
