@@ -1,8 +1,6 @@
 import { defineStore } from 'pinia';
 
-import {
-    getNotificationsRequest
-} from '../api/notifications.service';
+import * as notificationsService from '../api/notifications.service';
 
 export const useNotificationsStore = defineStore('notifications', {
   state: () => ({
@@ -18,10 +16,29 @@ export const useNotificationsStore = defineStore('notifications', {
       this.loading = true;
 
       try {
-        const response = await getNotificationsRequest();
+        const response = await notificationsService.getNotificationsRequest();
         this.notifications = response.data || [];
       } finally {
         this.loading = false;
+      }
+    },
+    async deleteNotification(notifId) {
+      try {
+        await notificationsService.deleteNotification(notifId);
+        
+        this.notifications = this.notifications.filter(n => n.id !== notifId);
+      } catch (error) {
+        console.error("Failed to delete:", error);
+        throw error;
+      }
+    },
+    async toggleReadNotification(notifId,routeToUse) {
+      try {
+        await notificationsService.toggleReadNotification(notifId,routeToUse);
+        
+      } catch (error) {
+        console.error("Failed to update:", error);
+        throw error;
       }
     },
   },
