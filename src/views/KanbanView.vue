@@ -188,9 +188,36 @@ const syncSelectedTask = () => {
   if (updated) selectedTask.value = { ...updated };
 };
 
-// Encuentra la etapa del chart actual que tiene mappedStatus === status
-const stageForStatus = (status) =>
-  stagesStore.stages.find((s) => s.mappedStatus === status) ?? null;
+// Nombres canónicos de las etapas por defecto → mappedStatus
+const DEFAULT_STAGE_NAMES = {
+  'to do': 'PENDING',
+  'in progress': 'IN_PROGRESS',
+  'review': 'REVIEW',
+  'done': 'COMPLETED',
+};
+
+// Encuentra la etapa del chart actual que tiene mappedStatus === status.
+// Si ninguna lo tiene, intenta por nombre de etapa como fallback.
+const stageForStatus = (status) => {
+  const byMapped = stagesStore.stages.find((s) => s.mappedStatus === status);
+  if (byMapped) return byMapped;
+  const name = Object.entries(DEFAULT_STAGE_NAMES).find(([, v]) => v === status)?.[0];
+  if (!name) return null;
+  return stagesStore.stages.find((s) => s.name.toLowerCase() === name) ?? null;
+};
+
+// Persiste mappedStatus en stages que tengan nombre canónico pero el campo vacío.
+// Se ejecuta en background tras cargar stages.
+const repairStageMappings = async () => {
+  for (const stage of stagesStore.stages) {
+    if (stage.mappedStatus) continue;
+    const inferredStatus = DEFAULT_STAGE_NAMES[stage.name.toLowerCase()];
+    if (!inferredStatus) continue;
+    try {
+      await stagesStore.updateStage(stage.id, { mappedStatus: inferredStatus });
+    } catch { /* usuario puede no tener permiso — ignorar */ }
+  }
+};
 
 // Mueve el task a la etapa que corresponde al nuevo status (si existe y es diferente)
 const moveToPairedStage = async (fromTask, newStatus) => {
@@ -207,50 +234,75 @@ const handleJoinTask = async () => {
   try {
     joiningTask.value = true;
     await tasksStore.joinTask(selectedTask.value.id, authStore.user?.id);
+  } catch { /* ignore */ } finally {
+    joiningTask.value = false;
     syncSelectedTask();
-  } catch { /* ignore */ } finally { joiningTask.value = false; }
+  }
 };
 
 const handleAdvanceTask = async () => {
   if (!selectedTask.value) return;
   const task = { ...selectedTask.value };
   const nextStatus = task.status === 'PENDING' ? 'IN_PROGRESS' : 'REVIEW';
+  advancingTask.value = true;
+  stageError.value = '';
+  try { await tasksStore.advanceStatus(task.id); } catch { /* ignore */ }
   try {
-    advancingTask.value = true;
-    await tasksStore.advanceStatus(task.id);
     await moveToPairedStage(task, nextStatus);
-    syncSelectedTask();
-  } catch { /* ignore */ } finally { advancingTask.value = false; }
+  } catch (err) {
+    const code = err.response?.data?.error?.code;
+    stageError.value = code === 'DESTINATION_WIP_LIMIT_REACHED'
+      ? 'Límite WIP alcanzado en la columna destino'
+      : err.response?.data?.message || 'No se pudo mover la tarea a la etapa correspondiente';
+  }
+  syncSelectedTask();
+  advancingTask.value = false;
 };
 
 const handleCompleteTask = async () => {
   if (!selectedTask.value) return;
   const task = { ...selectedTask.value };
+  advancingTask.value = true;
+  stageError.value = '';
+  try { await tasksStore.completeReview(task.id); } catch { /* ignore */ }
   try {
-    advancingTask.value = true;
-    await tasksStore.completeReview(task.id);
     await moveToPairedStage(task, 'COMPLETED');
-    syncSelectedTask();
-  } catch { /* ignore */ } finally { advancingTask.value = false; }
+  } catch (err) {
+    const code = err.response?.data?.error?.code;
+    stageError.value = code === 'DESTINATION_WIP_LIMIT_REACHED'
+      ? 'Límite WIP alcanzado en la columna destino'
+      : err.response?.data?.message || 'No se pudo mover la tarea a la etapa correspondiente';
+  }
+  syncSelectedTask();
+  advancingTask.value = false;
 };
 
 const handleClaimReviewTask = async () => {
   try {
     joiningTask.value = true;
     await tasksStore.claimTask(selectedTask.value.id, authStore.user?.id);
+  } catch { /* ignore */ } finally {
+    joiningTask.value = false;
     syncSelectedTask();
-  } catch { /* ignore */ } finally { joiningTask.value = false; }
+  }
 };
 
 const handleRejectTask = async () => {
   if (!selectedTask.value) return;
   const task = { ...selectedTask.value };
+  rejectingTask.value = true;
+  stageError.value = '';
+  try { await tasksStore.rejectReview(task.id); } catch { /* ignore */ }
   try {
-    rejectingTask.value = true;
-    await tasksStore.rejectReview(task.id);
     await moveToPairedStage(task, 'IN_PROGRESS');
-    syncSelectedTask();
-  } catch { /* ignore */ } finally { rejectingTask.value = false; }
+  } catch (err) {
+    const code = err.response?.data?.error?.code;
+    stageError.value = code === 'DESTINATION_WIP_LIMIT_REACHED'
+      ? 'Límite WIP alcanzado en la columna destino'
+      : err.response?.data?.message || 'No se pudo mover la tarea a la etapa correspondiente';
+  }
+  syncSelectedTask();
+  rejectingTask.value = false;
 };
 
 // Task creation
@@ -566,6 +618,8 @@ onMounted(async () => {
         allUsers.value = res.data || [];
       }),
     ]);
+    // Repara stages que tienen nombre canónico pero mappedStatus vacío en Firestore
+    repairStageMappings();
   } catch {
     pageError.value = 'No se pudo cargar el tablero';
   } finally {

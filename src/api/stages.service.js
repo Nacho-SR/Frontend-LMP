@@ -25,6 +25,11 @@ export const moveTaskRequest = async (taskId, fromStageId, toStageId) => {
   return response.data;
 };
 
+export const addTaskToStageRequest = async (stageId, taskId) => {
+  const response = await api.post(`/stages/${stageId}/tasks`, { taskId });
+  return response.data;
+};
+
 export const reorderStagesRequest = async (chartId, teamId, stageIds) => {
   const response = await api.patch(`/stages/chart/${chartId}/team/${teamId}/order`, { stageIds });
   return response.data;

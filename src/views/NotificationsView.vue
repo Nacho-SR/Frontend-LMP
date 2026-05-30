@@ -21,14 +21,17 @@ const statusMessage = ref('');
 const errorMessage = ref('');
 
 const deleteConfirm = reactive({ open: false, notificationId: null, loading: false });
-
-const formatTimestamp = (timestamp) => {  
-  const date = new Date(timestamp._seconds * 1000);
-  return date.toLocaleString(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short'
+const formatDate = (dateStr) => {
+  if (!dateStr) return null;
+  return new Date(dateStr).toLocaleDateString('es-MX', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
   });
 };
+
 const openDelete = (notificationId) => {
   deleteConfirm.notificationId = notificationId;
   deleteConfirm.open = true;
@@ -121,7 +124,7 @@ onMounted(() => notificationsStore.fetchNotifications());
                     {{ notification.title }}
                   </h2>
                   <span :class="notification.read ? 'text-slate-600' : 'text-slate-200'" class="text-xs whitespace-nowrap pt-0.5">
-                    {{formatTimestamp(notification.createdAt) }} <span v-if="notification.read">🗸</span>
+                    {{formatDate(notification.createdAt) }} <span v-if="notification.read">🗸</span>
                   </span>
 
                 </div>
