@@ -25,6 +25,11 @@ export const assignTaskRequest = async (taskId, userIds) => {
   return response.data;
 };
 
+export const updateTaskRequest = async (taskId, data) => {
+  const response = await api.put(`/tasks/${taskId}`, data);
+  return response.data;
+};
+
 export const deleteTaskRequest = async (taskId) => {
   const response = await api.delete(`/tasks/${taskId}`);
   return response.data;

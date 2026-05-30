@@ -6,6 +6,7 @@ import {
   deleteTaskRequest,
   getMyTasksRequest,
   getTeamTasksRequest,
+  updateTaskRequest,
   updateTaskStatusRequest,
 } from '../api/tasks.service';
 
@@ -82,8 +83,7 @@ export const useTasksStore = defineStore('tasks', {
       const response = await updateTaskStatusRequest(taskId, 'IN_PROGRESS');
       const idx = this.tasks.findIndex((t) => t.id === taskId);
       if (idx !== -1) {
-        // Forzar limpieza local — joinTask no debe leer la lista del revisor anterior
-        this.tasks[idx] = { ...this.tasks[idx], ...response.data, assignedUserIds: [] };
+        this.tasks[idx] = { ...this.tasks[idx], ...response.data, assignedUserIds: [], workerIds: [] };
       }
     },
 
@@ -107,6 +107,14 @@ export const useTasksStore = defineStore('tasks', {
       if (idx !== -1) {
         this.tasks[idx] = { ...this.tasks[idx], assignedUserIds: response.data.assignedUserIds };
       }
+    },
+
+    async updateTask(taskId, payload) {
+      const response = await updateTaskRequest(taskId, payload);
+      const updated = response.data;
+      const idx = this.tasks.findIndex((t) => t.id === taskId);
+      if (idx !== -1) this.tasks.splice(idx, 1, { ...this.tasks[idx], ...updated });
+      return updated;
     },
 
     async deleteTask(taskId) {

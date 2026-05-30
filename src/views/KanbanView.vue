@@ -1,8 +1,13 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 
 import AlertMessage from '../components/ui/AlertMessage.vue';
+import BaseButton from '../components/ui/BaseButton.vue';
+import BaseInput from '../components/ui/BaseInput.vue';
+import BaseSelect from '../components/ui/BaseSelect.vue';
+import BaseTextarea from '../components/ui/BaseTextarea.vue';
+import ConfirmDialog from '../components/ui/ConfirmDialog.vue';
 import LoadingState from '../components/ui/LoadingState.vue';
 import PageHeader from '../components/ui/PageHeader.vue';
 import { fetchUserList } from '../api/users.service';
@@ -29,11 +34,15 @@ const pageError = ref('');
 const stageError = ref('');
 const loading = ref(true);
 
-// Drag & drop
+// Task drag & drop
 const draggedTaskId = ref(null);
 const draggedFromStageId = ref(null);
 const dragOverStageId = ref(null);
 const movingTaskId = ref(null);
+
+// Column drag & drop (reorder)
+const draggedStageId = ref(null);
+const dragOverColumnId = ref(null);
 
 // Stage creation
 const showCreateStage = ref(false);
@@ -45,6 +54,225 @@ const editingStageId = ref(null);
 const editingStageName = ref('');
 const savingStageId = ref(null);
 const deletingStageId = ref(null);
+
+// Task detail / edit / delete
+const selectedTask = ref(null);
+const taskDetailMode = ref('view'); // 'view' | 'edit'
+const savingEdit = ref(false);
+const editError = ref('');
+const deleteConfirm = reactive({ open: false, loading: false });
+
+const joiningTask = ref(false);
+const advancingTask = ref(false);
+const rejectingTask = ref(false);
+
+const editForm = reactive({
+  name: '',
+  priority: '2',
+  description: '',
+  dueDate: '',
+  maxWorkers: '',
+});
+
+const PRIORITY_LABEL = { 1: 'Baja', 2: 'Media', 3: 'Alta', 4: 'Urgente' };
+
+const formatDate = (str) => {
+  if (!str) return null;
+  return new Date(str).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
+const getMaxWorkers = (task) => {
+  const tag = (task?.tags || []).find((t) => t.startsWith('maxWorkers:'));
+  if (!tag) return null;
+  const n = parseInt(tag.split(':')[1]);
+  return Number.isFinite(n) && n > 0 ? n : null;
+};
+
+const stageName = (stageId) => stagesStore.stages.find((s) => s.id === stageId)?.name ?? '—';
+
+const isMyTask = computed(() => selectedTask.value?.assignedUserIds?.includes(authStore.user?.id));
+const isWorkerOf = computed(() => selectedTask.value?.workerIds?.includes(authStore.user?.id));
+const isTaskFull = computed(() => {
+  const max = getMaxWorkers(selectedTask.value);
+  if (!max) return false;
+  return (selectedTask.value?.assignedUserIds || []).length >= max;
+});
+
+const openTask = (task) => {
+  selectedTask.value = task;
+  taskDetailMode.value = 'view';
+  editError.value = '';
+};
+
+const openEditMode = () => {
+  const t = selectedTask.value;
+  editForm.name = t.name;
+  editForm.priority = String(t.priority ?? 2);
+  editForm.description = t.description || '';
+  editForm.dueDate = t.dueDate ? t.dueDate.split('T')[0] : '';
+  editForm.maxWorkers = getMaxWorkers(t) ? String(getMaxWorkers(t)) : '';
+  taskDetailMode.value = 'edit';
+};
+
+const handleUpdateTask = async () => {
+  if (!editForm.name.trim()) return;
+  try {
+    savingEdit.value = true;
+    editError.value = '';
+    const tags = (selectedTask.value.tags || []).filter((t) => !t.startsWith('maxWorkers:'));
+    const max = parseInt(editForm.maxWorkers);
+    if (Number.isFinite(max) && max > 0) tags.push(`maxWorkers:${max}`);
+
+    const payload = {
+      name: editForm.name.trim(),
+      priority: Number(editForm.priority),
+      description: editForm.description,
+      dueDate: editForm.dueDate ? new Date(editForm.dueDate).toISOString() : null,
+      tags,
+    };
+    const taskId = selectedTask.value.id;
+    const updated = await tasksStore.updateTask(taskId, payload);
+    // Backend devuelve objeto parcial (sin description/tags), así que
+    // fusionamos también los valores del formulario para reflejar el cambio completo
+    const fullUpdated = {
+      ...selectedTask.value,
+      ...updated,
+      name: payload.name,
+      priority: payload.priority,
+      description: payload.description,
+      dueDate: payload.dueDate ?? selectedTask.value.dueDate,
+      tags: payload.tags,
+    };
+    selectedTask.value = fullUpdated;
+    // Sincronizar también en el store con los campos completos
+    const storeIdx = tasksStore.tasks.findIndex((t) => t.id === taskId);
+    if (storeIdx !== -1) {
+      tasksStore.tasks.splice(storeIdx, 1, { ...tasksStore.tasks[storeIdx], ...fullUpdated });
+    }
+    taskDetailMode.value = 'view';
+  } catch (error) {
+    editError.value = error.response?.data?.message || 'No se pudo actualizar la tarea';
+  } finally {
+    savingEdit.value = false;
+  }
+};
+
+const handleDeleteTask = async () => {
+  try {
+    deleteConfirm.loading = true;
+    const stageId = selectedTask.value.stageId;
+    await tasksStore.deleteTask(selectedTask.value.id);
+    if (stageId) {
+      const idx = stagesStore.stages.findIndex((s) => s.id === stageId);
+      if (idx !== -1) {
+        const stage = stagesStore.stages[idx];
+        stagesStore.stages.splice(idx, 1, {
+          ...stage,
+          taskIds: (stage.taskIds || []).filter((id) => id !== selectedTask.value.id),
+        });
+      }
+    }
+    selectedTask.value = null;
+    deleteConfirm.open = false;
+  } catch {
+    // ignore
+  } finally {
+    deleteConfirm.loading = false;
+  }
+};
+
+// Sync selectedTask after store updates (store replaces the array item by reference)
+const syncSelectedTask = () => {
+  if (!selectedTask.value) return;
+  const updated = tasksStore.tasks.find((t) => t.id === selectedTask.value.id);
+  if (updated) selectedTask.value = { ...updated };
+};
+
+// Encuentra la etapa del chart actual que tiene mappedStatus === status
+const stageForStatus = (status) =>
+  stagesStore.stages.find((s) => s.mappedStatus === status) ?? null;
+
+// Mueve el task a la etapa que corresponde al nuevo status (si existe y es diferente)
+const moveToPairedStage = async (fromTask, newStatus) => {
+  const target = stageForStatus(newStatus);
+  if (!target || !fromTask.stageId || fromTask.stageId === target.id) return;
+  await stagesStore.moveTask(fromTask.id, fromTask.stageId, target.id);
+  const idx = tasksStore.tasks.findIndex((t) => t.id === fromTask.id);
+  if (idx !== -1) {
+    tasksStore.tasks.splice(idx, 1, { ...tasksStore.tasks[idx], stageId: target.id });
+  }
+};
+
+const handleJoinTask = async () => {
+  try {
+    joiningTask.value = true;
+    await tasksStore.joinTask(selectedTask.value.id, authStore.user?.id);
+    syncSelectedTask();
+  } catch { /* ignore */ } finally { joiningTask.value = false; }
+};
+
+const handleAdvanceTask = async () => {
+  if (!selectedTask.value) return;
+  const task = { ...selectedTask.value };
+  const nextStatus = task.status === 'PENDING' ? 'IN_PROGRESS' : 'REVIEW';
+  try {
+    advancingTask.value = true;
+    await tasksStore.advanceStatus(task.id);
+    await moveToPairedStage(task, nextStatus);
+    syncSelectedTask();
+  } catch { /* ignore */ } finally { advancingTask.value = false; }
+};
+
+const handleCompleteTask = async () => {
+  if (!selectedTask.value) return;
+  const task = { ...selectedTask.value };
+  try {
+    advancingTask.value = true;
+    await tasksStore.completeReview(task.id);
+    await moveToPairedStage(task, 'COMPLETED');
+    syncSelectedTask();
+  } catch { /* ignore */ } finally { advancingTask.value = false; }
+};
+
+const handleClaimReviewTask = async () => {
+  try {
+    joiningTask.value = true;
+    await tasksStore.claimTask(selectedTask.value.id, authStore.user?.id);
+    syncSelectedTask();
+  } catch { /* ignore */ } finally { joiningTask.value = false; }
+};
+
+const handleRejectTask = async () => {
+  if (!selectedTask.value) return;
+  const task = { ...selectedTask.value };
+  try {
+    rejectingTask.value = true;
+    await tasksStore.rejectReview(task.id);
+    await moveToPairedStage(task, 'IN_PROGRESS');
+    syncSelectedTask();
+  } catch { /* ignore */ } finally { rejectingTask.value = false; }
+};
+
+// Task creation
+const showCreateTask = ref(false);
+const savingTask = ref(false);
+const createError = ref('');
+const createSuccess = ref('');
+
+const PRIORITY_OPTIONS = [
+  { value: '1', label: 'Baja' },
+  { value: '2', label: 'Media' },
+  { value: '3', label: 'Alta' },
+  { value: '4', label: 'Urgente' },
+];
+
+const createForm = reactive({
+  name: '',
+  priority: '2',
+  description: '',
+  dueDate: '',
+  maxWorkers: '',
+});
 
 const myRole = computed(() => {
   const uid = authStore.user?.id;
@@ -111,6 +339,67 @@ const onDragOver = (stageId) => {
 const onDragLeave = (event) => {
   if (!event.currentTarget.contains(event.relatedTarget)) {
     dragOverStageId.value = null;
+    dragOverColumnId.value = null;
+  }
+};
+
+// ── Column reorder ─────────────────────────────────────────────────────────────
+const onColumnDragStart = (event, stageId) => {
+  draggedStageId.value = stageId;
+  event.dataTransfer.effectAllowed = 'move';
+};
+
+const onColumnDragEnd = () => {
+  draggedStageId.value = null;
+  dragOverColumnId.value = null;
+};
+
+const onColumnDrop = async (toStageId) => {
+  dragOverColumnId.value = null;
+  if (!draggedStageId.value || draggedStageId.value === toStageId) {
+    draggedStageId.value = null;
+    return;
+  }
+
+  const fromId = draggedStageId.value;
+  draggedStageId.value = null;
+
+  const stages = [...stagesStore.stages];
+  const fromIdx = stages.findIndex((s) => s.id === fromId);
+  const toIdx = stages.findIndex((s) => s.id === toStageId);
+  if (fromIdx === -1 || toIdx === -1) return;
+
+  const [moved] = stages.splice(fromIdx, 1);
+  stages.splice(toIdx, 0, moved);
+  stagesStore.stages = stages; // optimistic update
+
+  try {
+    stageError.value = '';
+    await stagesStore.reorderStages(
+      props.chartId,
+      chart.value.teamId,
+      stages.map((s) => s.id),
+    );
+  } catch {
+    await stagesStore.fetchStages(props.chartId, chart.value.teamId);
+    stageError.value = 'No se pudo reordenar las etapas';
+  }
+};
+
+// Dispatchers: decide if it's a column drag or a task drag
+const handleDragOver = (stageId) => {
+  if (draggedStageId.value) {
+    dragOverColumnId.value = stageId;
+  } else {
+    onDragOver(stageId);
+  }
+};
+
+const handleDrop = (stageId) => {
+  if (draggedStageId.value) {
+    onColumnDrop(stageId);
+  } else {
+    onDrop(stageId);
   }
 };
 
@@ -201,6 +490,59 @@ const handleDeleteStage = async (stageId) => {
   }
 };
 
+// ── Task creation ──────────────────────────────────────────────────────────────
+const handleCreateTask = async () => {
+  if (!createForm.name.trim()) return;
+  const firstStage = stagesStore.stages[0];
+  if (!firstStage) return;
+  try {
+    savingTask.value = true;
+    createError.value = '';
+    createSuccess.value = '';
+
+    const tags = [];
+    const max = parseInt(createForm.maxWorkers);
+    if (Number.isFinite(max) && max > 0) tags.push(`maxWorkers:${max}`);
+
+    const payload = {
+      name: createForm.name.trim(),
+      teamId: chart.value.teamId,
+      projectId: props.projectId,
+      chartId: props.chartId,
+      stageId: firstStage.id,
+      priority: Number(createForm.priority),
+      description: createForm.description,
+      tags,
+    };
+    if (createForm.dueDate) {
+      payload.dueDate = new Date(createForm.dueDate).toISOString();
+    }
+
+    const task = await tasksStore.createTask(payload);
+
+    const idx = stagesStore.stages.findIndex((s) => s.id === firstStage.id);
+    if (idx !== -1) {
+      const stage = stagesStore.stages[idx];
+      stagesStore.stages.splice(idx, 1, {
+        ...stage,
+        taskIds: [...(stage.taskIds || []), task.id],
+      });
+    }
+
+    createForm.name = '';
+    createForm.description = '';
+    createForm.dueDate = '';
+    createForm.priority = '2';
+    createForm.maxWorkers = '';
+    showCreateTask.value = false;
+    createSuccess.value = 'Tarea creada correctamente';
+  } catch (error) {
+    createError.value = error.response?.data?.message || 'No se pudo crear la tarea';
+  } finally {
+    savingTask.value = false;
+  }
+};
+
 // ── Init ───────────────────────────────────────────────────────────────────────
 onMounted(async () => {
   try {
@@ -242,13 +584,22 @@ onMounted(async () => {
       >
         ← Proyecto
       </RouterLink>
-      <div class="mt-2">
+      <div class="mt-2 flex items-center justify-between gap-4">
         <PageHeader :title="chart?.name || 'Tablero'" subtitle="Kanban" />
+        <button
+          v-if="stagesStore.stages.length"
+          type="button"
+          class="shrink-0 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
+          @click="showCreateTask = true; createError = ''; createSuccess = ''"
+        >
+          + Nueva tarea
+        </button>
       </div>
     </div>
 
     <AlertMessage v-if="pageError" type="error" :message="pageError" class="shrink-0" />
     <AlertMessage v-if="stageError" type="error" :message="stageError" class="shrink-0" />
+    <AlertMessage v-if="createSuccess" type="success" :message="createSuccess" class="shrink-0" />
 
     <LoadingState v-if="loading" message="Cargando tablero..." />
 
@@ -261,14 +612,37 @@ onMounted(async () => {
           <div
             v-for="stage in stagesStore.stages"
             :key="stage.id"
-            class="flex h-full w-72 flex-col rounded-lg border border-slate-200 bg-slate-50 shadow-sm transition-colors"
-            :class="dragOverStageId === stage.id ? 'border-indigo-400 bg-indigo-50' : ''"
-            @dragover.prevent="onDragOver(stage.id)"
+            class="flex h-full w-72 flex-col rounded-lg border border-slate-200 bg-slate-50 shadow-sm transition-all"
+            :class="[
+              dragOverStageId === stage.id ? 'border-indigo-400 bg-indigo-50' : '',
+              dragOverColumnId === stage.id ? 'ring-2 ring-indigo-400 ring-offset-1' : '',
+              draggedStageId === stage.id ? 'opacity-40' : '',
+            ]"
+            @dragover.prevent="handleDragOver(stage.id)"
             @dragleave="onDragLeave"
-            @drop.prevent="onDrop(stage.id)"
+            @drop.prevent="handleDrop(stage.id)"
           >
             <!-- Cabecera columna -->
             <div class="flex items-center justify-between rounded-t-lg bg-white px-3 py-2.5 shadow-sm">
+              <!-- Handle de arrastre (reordenar columnas) -->
+              <div
+                v-if="canManageStages"
+                draggable="true"
+                class="mr-1 shrink-0 cursor-grab text-slate-300 hover:text-slate-500 active:cursor-grabbing"
+                title="Arrastrar para reordenar"
+                @dragstart.stop="onColumnDragStart($event, stage.id)"
+                @dragend.stop="onColumnDragEnd"
+              >
+                <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                  <circle cx="7" cy="4" r="1.5"/>
+                  <circle cx="13" cy="4" r="1.5"/>
+                  <circle cx="7" cy="10" r="1.5"/>
+                  <circle cx="13" cy="10" r="1.5"/>
+                  <circle cx="7" cy="16" r="1.5"/>
+                  <circle cx="13" cy="16" r="1.5"/>
+                </svg>
+              </div>
+
               <!-- Nombre editable -->
               <div v-if="editingStageId === stage.id" class="flex flex-1 items-center gap-1">
                 <input
@@ -330,9 +704,10 @@ onMounted(async () => {
                 v-for="task in tasksByStage[stage.id]"
                 :key="task.id"
                 draggable="true"
-                class="cursor-grab rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md active:cursor-grabbing"
+                class="cursor-pointer rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md active:cursor-grabbing"
                 :class="movingTaskId === task.id ? 'opacity-40' : ''"
                 @dragstart="onDragStart($event, task.id, stage.id)"
+                @click="openTask(task)"
               >
                 <!-- Prioridad + nombre -->
                 <div class="flex items-start gap-2">
@@ -419,4 +794,293 @@ onMounted(async () => {
       </div>
     </template>
   </section>
+
+  <!-- Modal: detalle de tarea -->
+  <Teleport to="body">
+    <Transition name="dialog">
+      <div
+        v-if="selectedTask"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4"
+        @click.self="selectedTask = null"
+      >
+        <div class="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" @click="selectedTask = null" />
+
+        <div class="relative w-full max-w-lg rounded-lg border border-slate-200 bg-white shadow-lg">
+          <!-- Cabecera modal -->
+          <div class="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
+            <div class="min-w-0 flex-1">
+              <p v-if="taskDetailMode === 'view'" class="text-base font-semibold text-slate-950 leading-snug">
+                {{ selectedTask.name }}
+              </p>
+              <p v-else class="text-sm font-medium text-slate-500">Editar tarea</p>
+            </div>
+            <button
+              type="button"
+              class="shrink-0 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              @click="selectedTask = null"
+            >
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Cuerpo: modo vista -->
+          <div v-if="taskDetailMode === 'view'" class="space-y-3 px-6 py-4">
+            <!-- Badges -->
+            <div class="flex flex-wrap gap-2">
+              <span
+                class="rounded px-2 py-0.5 text-xs font-medium"
+                :class="statusColor[selectedTask.status] || 'text-slate-500 bg-slate-100'"
+              >
+                {{ statusLabel[selectedTask.status] || selectedTask.status }}
+              </span>
+              <span
+                class="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium"
+                :class="[
+                  selectedTask.priority >= 4 ? 'bg-red-50 text-red-700' :
+                  selectedTask.priority === 3 ? 'bg-orange-50 text-orange-700' :
+                  selectedTask.priority === 2 ? 'bg-yellow-50 text-yellow-700' :
+                  'bg-green-50 text-green-700'
+                ]"
+              >
+                {{ PRIORITY_LABEL[selectedTask.priority] || 'Media' }}
+              </span>
+            </div>
+
+            <!-- Descripción -->
+            <p v-if="selectedTask.description" class="text-sm text-slate-600">
+              {{ selectedTask.description }}
+            </p>
+            <p v-else class="text-sm text-slate-400 italic">Sin descripción</p>
+
+            <!-- Metadatos -->
+            <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+              <div>
+                <dt class="text-xs font-medium text-slate-400">Etapa</dt>
+                <dd class="text-slate-700">{{ stageName(selectedTask.stageId) }}</dd>
+              </div>
+              <div v-if="selectedTask.dueDate">
+                <dt class="text-xs font-medium text-slate-400">Fecha límite</dt>
+                <dd class="text-slate-700">{{ formatDate(selectedTask.dueDate) }}</dd>
+              </div>
+              <div v-if="getMaxWorkers(selectedTask)">
+                <dt class="text-xs font-medium text-slate-400">Máx. trabajadores</dt>
+                <dd class="text-slate-700">{{ getMaxWorkers(selectedTask) }}</dd>
+              </div>
+            </dl>
+
+            <!-- Asignados -->
+            <div v-if="selectedTask.assignedUserIds?.length">
+              <p class="mb-1 text-xs font-medium text-slate-400">Asignado a</p>
+              <div class="flex flex-wrap gap-1">
+                <span
+                  v-for="uid in selectedTask.assignedUserIds"
+                  :key="uid"
+                  class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700"
+                >
+                  {{ userName(uid) || uid }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cuerpo: modo edición (solo OWNER/MANAGER) -->
+          <div v-else class="px-6 py-4">
+            <div class="grid gap-3 sm:grid-cols-2">
+              <div class="sm:col-span-2">
+                <BaseInput id="et-name" v-model="editForm.name" label="Nombre" required />
+              </div>
+              <BaseSelect
+                id="et-priority"
+                v-model="editForm.priority"
+                label="Prioridad"
+                :options="PRIORITY_OPTIONS"
+              />
+              <BaseInput id="et-due" v-model="editForm.dueDate" label="Fecha límite" type="date" />
+              <BaseInput
+                id="et-workers"
+                v-model="editForm.maxWorkers"
+                label="Máx. trabajadores"
+                type="number"
+                min="1"
+                max="20"
+                placeholder="Sin límite"
+              />
+              <div class="sm:col-span-2">
+                <BaseTextarea id="et-desc" v-model="editForm.description" label="Descripción" :rows="3" />
+              </div>
+            </div>
+            <AlertMessage v-if="editError" type="error" :message="editError" class="mt-3" />
+          </div>
+
+          <!-- Pie del modal -->
+          <div class="flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+            <template v-if="taskDetailMode === 'view'">
+              <!-- Asignarme: tarea pendiente/en-progreso sin cupo lleno y no soy asignado -->
+              <BaseButton
+                v-if="!isMyTask && ['PENDING', 'IN_PROGRESS'].includes(selectedTask.status) && !isTaskFull"
+                variant="secondary"
+                size="sm"
+                :loading="joiningTask"
+                @click="handleJoinTask"
+              >
+                Asignarme
+              </BaseButton>
+
+              <!-- Avanzar estado: solo si soy asignado en PENDING o IN_PROGRESS -->
+              <BaseButton
+                v-if="isMyTask && ['PENDING', 'IN_PROGRESS'].includes(selectedTask.status)"
+                variant="secondary"
+                size="sm"
+                :loading="advancingTask"
+                @click="handleAdvanceTask"
+              >
+                {{ selectedTask.status === 'PENDING' ? 'Iniciar' : 'Enviar a revisión' }}
+              </BaseButton>
+
+              <!-- Tomar revisión: tarea en REVIEW, no soy el asignado actual y no trabajé en ella -->
+              <BaseButton
+                v-if="selectedTask.status === 'REVIEW' && !isMyTask && !isWorkerOf"
+                variant="secondary"
+                size="sm"
+                :loading="joiningTask"
+                @click="handleClaimReviewTask"
+              >
+                Asignar revisión
+              </BaseButton>
+
+              <!-- Acciones del revisor asignado -->
+              <template v-if="isMyTask && selectedTask.status === 'REVIEW'">
+                <BaseButton
+                  variant="secondary"
+                  size="sm"
+                  :loading="rejectingTask"
+                  @click="handleRejectTask"
+                >
+                  Regresar a progreso
+                </BaseButton>
+                <BaseButton
+                  size="sm"
+                  :loading="advancingTask"
+                  @click="handleCompleteTask"
+                >
+                  Completar
+                </BaseButton>
+              </template>
+
+              <!-- Gestión (OWNER/MANAGER) -->
+              <template v-if="canManageStages">
+                <BaseButton variant="secondary" size="sm" @click="openEditMode">Editar</BaseButton>
+                <BaseButton variant="danger" size="sm" @click="deleteConfirm.open = true">Eliminar</BaseButton>
+              </template>
+              <BaseButton variant="secondary" size="sm" @click="selectedTask = null">Cerrar</BaseButton>
+            </template>
+            <template v-else>
+              <BaseButton variant="secondary" size="sm" :disabled="savingEdit" @click="taskDetailMode = 'view'; editError = ''">Cancelar</BaseButton>
+              <BaseButton size="sm" :loading="savingEdit" :disabled="!editForm.name.trim()" @click="handleUpdateTask">Guardar</BaseButton>
+            </template>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
+
+  <ConfirmDialog
+    :open="deleteConfirm.open"
+    title="¿Eliminar tarea?"
+    description="Esta acción eliminará la tarea permanentemente. No se puede deshacer."
+    confirm-label="Eliminar"
+    confirm-variant="danger"
+    :loading="deleteConfirm.loading"
+    @confirm="handleDeleteTask"
+    @cancel="deleteConfirm.open = false"
+  />
+
+  <!-- Modal: nueva tarea -->
+  <Teleport to="body">
+    <Transition name="dialog">
+      <div
+        v-if="showCreateTask"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4"
+        @click.self="showCreateTask = false"
+      >
+        <div class="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" @click="showCreateTask = false" />
+
+        <div class="relative w-full max-w-lg rounded-lg border border-slate-200 bg-white p-6 shadow-lg">
+          <h2 class="text-base font-semibold text-slate-950">
+            Nueva tarea
+            <span class="ml-1 font-normal text-slate-400 text-sm">→ {{ stagesStore.stages[0]?.name || 'To Do' }}</span>
+          </h2>
+
+          <div class="mt-4 grid gap-3 sm:grid-cols-2">
+            <div class="sm:col-span-2">
+              <BaseInput id="kt-name" v-model="createForm.name" label="Nombre" required />
+            </div>
+            <BaseSelect
+              id="kt-priority"
+              v-model="createForm.priority"
+              label="Prioridad"
+              :options="PRIORITY_OPTIONS"
+            />
+            <BaseInput
+              id="kt-due"
+              v-model="createForm.dueDate"
+              label="Fecha límite"
+              type="date"
+            />
+            <BaseInput
+              id="kt-workers"
+              v-model="createForm.maxWorkers"
+              label="Máx. trabajadores"
+              type="number"
+              min="1"
+              max="20"
+              placeholder="Sin límite"
+            />
+            <div class="sm:col-span-2">
+              <BaseTextarea
+                id="kt-desc"
+                v-model="createForm.description"
+                label="Descripción"
+                :rows="3"
+              />
+            </div>
+          </div>
+
+          <AlertMessage v-if="createError" type="error" :message="createError" class="mt-3" />
+          <AlertMessage v-if="createSuccess" type="success" :message="createSuccess" class="mt-3" />
+
+          <div class="mt-5 flex justify-end gap-2">
+            <button
+              type="button"
+              class="secondary-button"
+              :disabled="savingTask"
+              @click="showCreateTask = false"
+            >
+              Cancelar
+            </button>
+            <BaseButton
+              :loading="savingTask"
+              :disabled="!createForm.name.trim()"
+              @click="handleCreateTask"
+            >
+              Crear tarea
+            </BaseButton>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
+
+<style scoped>
+.dialog-enter-active,
+.dialog-leave-active {
+  transition: opacity 0.15s ease;
+}
+.dialog-enter-from,
+.dialog-leave-to {
+  opacity: 0;
+}
+</style>
