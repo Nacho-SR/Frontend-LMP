@@ -6,6 +6,7 @@ import AlertMessage from '../components/ui/AlertMessage.vue';
 import BaseButton from '../components/ui/BaseButton.vue';
 import BaseInput from '../components/ui/BaseInput.vue';
 import BaseTextarea from '../components/ui/BaseTextarea.vue';
+import ConfirmDialog from '../components/ui/ConfirmDialog.vue';
 import EmptyState from '../components/ui/EmptyState.vue';
 import LoadingState from '../components/ui/LoadingState.vue';
 import PageHeader from '../components/ui/PageHeader.vue';
@@ -19,6 +20,7 @@ const isModifying = ref(false);
 const statusMessage = ref('');
 const errorMessage = ref('');
 
+const deleteConfirm = reactive({ open: false, notificationId: null, loading: false });
 
 const formatTimestamp = (timestamp) => {  
   const date = new Date(timestamp._seconds * 1000);
@@ -27,20 +29,24 @@ const formatTimestamp = (timestamp) => {
     timeStyle: 'short'
   });
 };
-const handleDelete = async (notificationID) => {
-  if (!confirm('Are you sure you want to delete this notification?')) return;
-
+const openDelete = (notificationId) => {
+  deleteConfirm.notificationId = notificationId;
+  deleteConfirm.open = true;
+};
+const handleDeleteConfirm = async () => {
   try {
-    isDeleting.value = true;
+    deleteConfirm.loading = true;
     errorMessage.value = '';
     
-    await notificationsStore.deleteNotification(notificationID);
+    await notificationsStore.deleteNotification(deleteConfirm.notificationId);
     
     statusMessage.value = "Notification deleted successfully";
   } catch (error) {
-    errorMessage.value = mapError(error, 'Notification couldn\'t be deleted');
+    errorMessage.value = error.message || 'Notification couldn\'t be deleted';
   } finally {
-    isDeleting.value = false;
+    deleteConfirm.loading = false;
+    deleteConfirm.open = false;
+    deleteConfirm.notificationId = null;
   }
 };
 const handleToggleRead = async (notificationID, newStatus) => {
@@ -51,7 +57,7 @@ const handleToggleRead = async (notificationID, newStatus) => {
     await notificationsStore.toggleReadNotification(notificationID,newStatus?'read':'unread');
     statusMessage.value = `Notification ${newStatus?'read':'unread'} successfully`;
   } catch (error) {
-    errorMessage.value = mapError(error, `Notification couldn\'t be ${newStatus?'read':'unread'}`);
+    errorMessage.value = error.message || `Notification couldn\'t be ${newStatus?'read':'unread'}`;
   } finally {
     isModifying.value = false;
   }
@@ -65,7 +71,7 @@ const handleReadAll = async () => {
     await notificationsStore.readAllNotifications();
     statusMessage.value = `Notifications read successfully`;
   } catch (error) {
-    errorMessage.value = mapError(error, `Notifications couldn\'t be read`);
+    errorMessage.value = error.message || `Notifications couldn\'t be read`;
   } finally {
     isModifying.value = false;
   }
@@ -86,6 +92,8 @@ onMounted(() => notificationsStore.fetchNotifications());
           Read All
         </button>
     </div>
+    <AlertMessage v-if="errorMessage" type="error" :message="errorMessage" />
+    <AlertMessage v-if="statusMessage" type="success" :message="statusMessage" />
     <div class="grid gap-6">
       <div>
         <LoadingState v-if="notificationsStore.loading" message="Cargando notificationes..." />
@@ -113,7 +121,7 @@ onMounted(() => notificationsStore.fetchNotifications());
                     {{ notification.title }}
                   </h2>
                   <span :class="notification.read ? 'text-slate-600' : 'text-slate-200'" class="text-xs whitespace-nowrap pt-0.5">
-                    {{formatTimestamp(notification.createdAt) }} <checkmark v-if="notification.read">🗸</checkmark>
+                    {{formatTimestamp(notification.createdAt) }} <span v-if="notification.read">🗸</span>
                   </span>
 
                 </div>
@@ -133,8 +141,8 @@ onMounted(() => notificationsStore.fetchNotifications());
                     notification.read ? 'bg-gray-600 hover:bg-gray-700' : 'bg-blue-600 hover:bg-blue-700']">
                   {{ notification.read ? 'Mark as Unread' : 'Mark as Read' }}
                 </button>
-                <button @click="handleDelete(notification.id)" 
-                :class="[
+                <button @click="openDelete(notification.id)" 
+                  :class="[
                     'rounded px-2 py-1 text-sm font-medium text-white transition-colors',
                     notification.read ? 'bg-orange-800 hover:bg-orange-900' : 'bg-red-600 hover:bg-red-700']">
                   Delete
@@ -145,5 +153,15 @@ onMounted(() => notificationsStore.fetchNotifications());
         </div>
       </div>
     </div>
+  <ConfirmDialog
+      :open="deleteConfirm.open"
+      title="Delete notification?"
+      description="This is permanent and CANNOT be undone."
+      confirm-label="Delete"
+      confirm-variant="danger"
+      :loading="deleteConfirm.loading"
+      @confirm="handleDeleteConfirm"
+      @cancel="deleteConfirm.open = false"
+    />
   </section>
 </template>
