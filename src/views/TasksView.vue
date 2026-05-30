@@ -395,7 +395,16 @@ onMounted(async () => {
           >
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0 flex-1">
-                <p class="truncate text-sm font-semibold text-slate-950">{{ task.name }}</p>
+                <p class="truncate text-sm font-semibold text-slate-950">
+                  
+                  <RouterLink
+                    :to="{ name: 'task-detail', params: { taskId: task.id } }"
+                    class="truncate text-sm font-semibold text-slate-950 text-white-800 hover:text-gray-900"
+                    >
+                    {{ task.name }}
+                  </RouterLink>
+                  
+                </p>
                 <p class="mt-0.5 text-xs text-slate-400">
                   {{ teamName(task.teamId) }} · {{ projectName(task.projectId) }}
                   <template v-if="getMaxWorkers(task)">
@@ -413,6 +422,7 @@ onMounted(async () => {
             </div>
 
             <p v-if="task.description" class="mt-2 line-clamp-2 text-xs text-slate-500">
+              
               {{ task.description }}
             </p>
 
@@ -528,6 +538,7 @@ onMounted(async () => {
                 >
                   Eliminar
                 </button>
+                
               </div>
             </div>
           </li>
