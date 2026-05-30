@@ -191,30 +191,37 @@ export const useTasksStore = defineStore('tasks', {
       if (!currentTask) return;
       const current = currentTask.assignedUserIds || [];
       if (current.includes(userId)) return;
-      
-      const response = await assignTaskRequest(taskId, [...current, userId]);
-      const resData = response?.data ? response.data : response;
-      
-      if (this.selectedTask && this.selectedTask.id === taskId) {
-        this.selectedTask.assignedUserIds = resData.assignedUserIds;
-      }
-      const idx = this.tasks.findIndex((t) => t.id === taskId);
-      if (idx !== -1) {
-        this.tasks[idx] = { ...this.tasks[idx], assignedUserIds: resData.assignedUserIds };
-      }
+
+      await this.assignUsers(taskId, [...current, userId]);
     },
 
     async claimTask(taskId, userId) {
-      const response = await assignTaskRequest(taskId, [userId]);
+      await this.assignUsers(taskId, [userId]);
+    },
+
+    async assignUsers(taskId, userIds) {
+      const response = await assignTaskRequest(taskId, userIds);
       const resData = response?.data ? response.data : response;
+      const assignedUserIds = resData?.assignedUserIds || userIds;
 
       if (this.selectedTask && this.selectedTask.id === taskId) {
-        this.selectedTask.assignedUserIds = resData.assignedUserIds;
+        this.selectedTask = {
+          ...this.selectedTask,
+          ...(resData || {}),
+          assignedUserIds,
+        };
       }
+
       const idx = this.tasks.findIndex((t) => t.id === taskId);
       if (idx !== -1) {
-        this.tasks[idx] = { ...this.tasks[idx], assignedUserIds: resData.assignedUserIds };
+        this.tasks[idx] = {
+          ...this.tasks[idx],
+          ...(resData || {}),
+          assignedUserIds,
+        };
       }
+
+      return assignedUserIds;
     },
 
     async updateTask(taskId, payload) {

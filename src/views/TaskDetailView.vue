@@ -5,6 +5,7 @@ import { RouterLink, useRouter } from 'vue-router';
 import AlertMessage from '../components/ui/AlertMessage.vue';
 import BaseButton from '../components/ui/BaseButton.vue';
 import BaseInput from '../components/ui/BaseInput.vue';
+import BaseSelect from '../components/ui/BaseSelect.vue';
 import BaseTextarea from '../components/ui/BaseTextarea.vue';
 import ConfirmDialog from '../components/ui/ConfirmDialog.vue';
 import EmptyState from '../components/ui/EmptyState.vue';
@@ -35,6 +36,10 @@ const commentContent = ref('');
 const submittingComment = ref(false);
 const actionLoading = ref(false);
 const allUsers = ref([]);
+const assignUserId = ref('');
+const assigningTask = ref(false);
+const assignError = ref('');
+const assignSuccess = ref('');
 
 const stableTeamId = ref('');
 const stableProjectId = ref('');
@@ -77,11 +82,39 @@ const projectName = computed(() =>
 
 const isMyTask = computed(() => assignedUserIds.value.includes(authStore.user?.id));
 const canDelete = computed(() => ['OWNER', 'MANAGER'].includes(localRole.value));
+const canAssignTask = computed(() => ['OWNER', 'MANAGER'].includes(localRole.value));
 
 const userName = (userId) => {
+  const member = teamsStore.members.find((m) => m.userId === userId);
+  if (member?.user) {
+    return member.user.displayName || member.user.userName || member.user.email || userId;
+  }
   const u = allUsers.value.find((u) => u.id === userId);
   return u?.displayName || u?.userName || userId;
 };
+
+const getMaxWorkers = (sourceTask) => {
+  const tag = (sourceTask?.tags || []).find((t) => t.startsWith('maxWorkers:'));
+  if (!tag) return null;
+  const n = parseInt(tag.split(':')[1]);
+  return Number.isFinite(n) && n > 0 ? n : null;
+};
+
+const isTaskFull = computed(() => {
+  const max = getMaxWorkers(task.value);
+  if (!max) return false;
+  return assignedUserIds.value.length >= max;
+});
+
+const assignableMemberOptions = computed(() => {
+  return teamsStore.members
+    .filter((member) => member.userId && !assignedUserIds.value.includes(member.userId))
+    .map((member) => ({
+      value: member.userId,
+      label: userName(member.userId),
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+});
 
 const formatDate = (dateStr) => {
   if (!dateStr) return null;
@@ -157,6 +190,24 @@ const handleComplete = async () => {
     actionLoading.value = true;
     await tasksStore.completeReview(task.value.id);
   } catch {} finally { actionLoading.value = false; }
+};
+
+const handleAssignSelectedUser = async () => {
+  if (!task.value || !assignUserId.value || isTaskFull.value) return;
+
+  try {
+    assigningTask.value = true;
+    assignError.value = '';
+    assignSuccess.value = '';
+
+    await tasksStore.assignUsers(task.value.id, [...assignedUserIds.value, assignUserId.value]);
+    assignUserId.value = '';
+    assignSuccess.value = 'Miembro asignado correctamente';
+  } catch (error) {
+    assignError.value = error.response?.data?.message || 'No se pudo asignar el miembro';
+  } finally {
+    assigningTask.value = false;
+  }
 };
 
 const handleAddComment = async () => {
@@ -289,6 +340,35 @@ onMounted(async () => {
                 </span>
               </div>
             </div>
+          </div>
+
+          <div v-if="canAssignTask" class="border-t border-slate-100 pt-4">
+            <div class="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+              <BaseSelect
+                id="task-detail-assignee"
+                v-model="assignUserId"
+                label="Asignar miembro"
+                placeholder="Selecciona un miembro"
+                :options="assignableMemberOptions"
+                :disabled="assigningTask || isTaskFull || !assignableMemberOptions.length"
+              />
+              <BaseButton
+                size="sm"
+                :loading="assigningTask"
+                :disabled="!assignUserId || isTaskFull"
+                @click="handleAssignSelectedUser"
+              >
+                Asignar
+              </BaseButton>
+            </div>
+            <p v-if="isTaskFull" class="mt-2 text-xs text-slate-500">
+              La tarea ya alcanzÃ³ el mÃ¡ximo de trabajadores.
+            </p>
+            <p v-else-if="!assignableMemberOptions.length" class="mt-2 text-xs text-slate-500">
+              Todos los miembros disponibles ya estÃ¡n asignados.
+            </p>
+            <AlertMessage v-if="assignError" type="error" :message="assignError" class="mt-3" />
+            <AlertMessage v-if="assignSuccess" type="success" :message="assignSuccess" class="mt-3" />
           </div>
         </div>
 

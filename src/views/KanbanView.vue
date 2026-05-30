@@ -65,6 +65,11 @@ const deleteConfirm = reactive({ open: false, loading: false });
 const joiningTask = ref(false);
 const advancingTask = ref(false);
 const rejectingTask = ref(false);
+const assignUserId = ref('');
+const assigningTask = ref(false);
+const removingAssigneeId = ref('');
+const assignError = ref('');
+const assignSuccess = ref('');
 
 const editForm = reactive({
   name: '',
@@ -102,6 +107,9 @@ const openTask = (task) => {
   selectedTask.value = task;
   taskDetailMode.value = 'view';
   editError.value = '';
+  assignUserId.value = '';
+  assignError.value = '';
+  assignSuccess.value = '';
 };
 
 const openEditMode = () => {
@@ -111,6 +119,9 @@ const openEditMode = () => {
   editForm.description = t.description || '';
   editForm.dueDate = t.dueDate ? t.dueDate.split('T')[0] : '';
   editForm.maxWorkers = getMaxWorkers(t) ? String(getMaxWorkers(t)) : '';
+  assignUserId.value = '';
+  assignError.value = '';
+  assignSuccess.value = '';
   taskDetailMode.value = 'edit';
 };
 
@@ -240,6 +251,48 @@ const handleJoinTask = async () => {
   }
 };
 
+const handleAssignSelectedUser = async () => {
+  if (!selectedTask.value || !assignUserId.value || isTaskFull.value) return;
+
+  const current = selectedTask.value.assignedUserIds || [];
+  if (current.includes(assignUserId.value)) return;
+
+  try {
+    assigningTask.value = true;
+    assignError.value = '';
+    assignSuccess.value = '';
+
+    await tasksStore.assignUsers(selectedTask.value.id, [...current, assignUserId.value]);
+    syncSelectedTask();
+    assignUserId.value = '';
+    assignSuccess.value = 'Miembro asignado correctamente';
+  } catch (error) {
+    assignError.value = error.response?.data?.message || 'No se pudo asignar el miembro';
+  } finally {
+    assigningTask.value = false;
+  }
+};
+
+const handleRemoveAssignedUser = async (userId) => {
+  if (!selectedTask.value || !userId) return;
+
+  const nextAssignedUserIds = (selectedTask.value.assignedUserIds || []).filter((id) => id !== userId);
+
+  try {
+    removingAssigneeId.value = userId;
+    assignError.value = '';
+    assignSuccess.value = '';
+
+    await tasksStore.assignUsers(selectedTask.value.id, nextAssignedUserIds);
+    syncSelectedTask();
+    assignSuccess.value = 'Miembro removido de la tarea';
+  } catch (error) {
+    assignError.value = error.response?.data?.message || 'No se pudo quitar el miembro';
+  } finally {
+    removingAssigneeId.value = '';
+  }
+};
+
 const handleAdvanceTask = async () => {
   if (!selectedTask.value) return;
   const task = { ...selectedTask.value };
@@ -350,9 +403,24 @@ const wipFull = (stage) => {
 };
 
 const userName = (userId) => {
+  const member = teamsStore.members.find((m) => m.userId === userId);
+  if (member?.user) {
+    return member.user.displayName || member.user.userName || member.user.email || null;
+  }
   const u = allUsers.value.find((u) => u.id === userId);
   return u?.displayName || u?.userName || null;
 };
+
+const assignableMemberOptions = computed(() => {
+  const assigned = selectedTask.value?.assignedUserIds || [];
+  return teamsStore.members
+    .filter((member) => member.userId && !assigned.includes(member.userId))
+    .map((member) => ({
+      value: member.userId,
+      label: userName(member.userId) || member.userId,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+});
 
 const priorityDot = (priority) => {
   if (priority >= 4) return 'bg-red-500';
@@ -937,6 +1005,38 @@ onMounted(async () => {
                 </span>
               </div>
             </div>
+
+            <div v-if="canManageStages" class="rounded-lg border border-slate-200 bg-slate-50/70 p-3">
+              <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <div class="min-w-0 flex-1">
+                  <BaseSelect
+                    id="task-member-assignee"
+                    v-model="assignUserId"
+                    label="Asignar miembro"
+                    placeholder="Selecciona un miembro"
+                    :options="assignableMemberOptions"
+                    :disabled="assigningTask || isTaskFull || !assignableMemberOptions.length"
+                  />
+                </div>
+                <BaseButton
+                  size="sm"
+                  class="sm:mb-0.5"
+                  :loading="assigningTask"
+                  :disabled="!assignUserId || isTaskFull"
+                  @click="handleAssignSelectedUser"
+                >
+                  Asignar
+                </BaseButton>
+              </div>
+              <p v-if="isTaskFull" class="mt-2 text-xs text-slate-500">
+                La tarea ya alcanzÃ³ el mÃ¡ximo de trabajadores.
+              </p>
+              <p v-else-if="!assignableMemberOptions.length" class="mt-2 text-xs text-slate-500">
+                Todos los miembros disponibles ya estÃ¡n asignados.
+              </p>
+              <AlertMessage v-if="assignError" type="error" :message="assignError" class="mt-3" />
+              <AlertMessage v-if="assignSuccess" type="success" :message="assignSuccess" class="mt-3" />
+            </div>
           </div>
 
           <!-- Cuerpo: modo edición (solo OWNER/MANAGER) -->
@@ -964,6 +1064,67 @@ onMounted(async () => {
               <div class="sm:col-span-2">
                 <BaseTextarea id="et-desc" v-model="editForm.description" label="Descripción" :rows="3" />
               </div>
+            </div>
+            <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50/70 p-3">
+              <div class="flex items-center justify-between gap-3">
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Miembros asignados</p>
+                <span class="text-xs text-slate-500">
+                  {{ selectedTask.assignedUserIds?.length || 0 }}{{ getMaxWorkers(selectedTask) ? `/${getMaxWorkers(selectedTask)}` : '' }}
+                </span>
+              </div>
+
+              <div class="mt-3 flex flex-wrap gap-2">
+                <span v-if="!selectedTask.assignedUserIds?.length" class="text-sm text-slate-500">
+                  Nadie asignado
+                </span>
+                <span
+                  v-for="uid in selectedTask.assignedUserIds"
+                  :key="uid"
+                  class="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200"
+                >
+                  {{ userName(uid) || uid }}
+                  <button
+                    type="button"
+                    class="rounded-full px-1 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:pointer-events-none disabled:opacity-50"
+                    :disabled="removingAssigneeId === uid || assigningTask"
+                    :aria-label="`Quitar a ${userName(uid) || uid}`"
+                    @click="handleRemoveAssignedUser(uid)"
+                  >
+                    {{ removingAssigneeId === uid ? '...' : 'x' }}
+                  </button>
+                </span>
+              </div>
+
+              <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
+                <div class="min-w-0 flex-1">
+                  <BaseSelect
+                    id="edit-task-member-assignee"
+                    v-model="assignUserId"
+                    label="Agregar miembro"
+                    placeholder="Selecciona un miembro"
+                    :options="assignableMemberOptions"
+                    :disabled="assigningTask || isTaskFull || !assignableMemberOptions.length"
+                  />
+                </div>
+                <BaseButton
+                  size="sm"
+                  class="sm:mb-0.5"
+                  :loading="assigningTask"
+                  :disabled="!assignUserId || isTaskFull"
+                  @click="handleAssignSelectedUser"
+                >
+                  Agregar
+                </BaseButton>
+              </div>
+
+              <p v-if="isTaskFull" class="mt-2 text-xs text-slate-500">
+                La tarea ya alcanzÃ³ el mÃ¡ximo de trabajadores.
+              </p>
+              <p v-else-if="!assignableMemberOptions.length" class="mt-2 text-xs text-slate-500">
+                Todos los miembros disponibles ya estÃ¡n asignados.
+              </p>
+              <AlertMessage v-if="assignError" type="error" :message="assignError" class="mt-3" />
+              <AlertMessage v-if="assignSuccess" type="success" :message="assignSuccess" class="mt-3" />
             </div>
             <AlertMessage v-if="editError" type="error" :message="editError" class="mt-3" />
           </div>
