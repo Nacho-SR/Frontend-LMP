@@ -579,7 +579,7 @@ onMounted(async () => {
                   
                   <RouterLink
                     :to="{ name: 'task-detail', params: { taskId: task.id } }"
-                    class="truncate text-sm font-semibold text-slate-950 text-white-800 hover:text-gray-900"
+                    class="truncate text-sm font-semibold text-slate-950 text-white-800 hover:text-blue-200"
                     >
                     {{ task.name }}
                   </RouterLink>

@@ -931,8 +931,10 @@ onMounted(async () => {
           <!-- Cabecera modal -->
           <div class="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
             <div class="min-w-0 flex-1">
-              <p v-if="taskDetailMode === 'view'" class="text-base font-semibold text-slate-950 leading-snug">
+              <p v-if="taskDetailMode === 'view'" class="text-base font-semibold text-slate-950 leading-snug text-white-800 hover:text-blue-200">
+                <RouterLink :to="{ name: 'task-detail', params: { taskId: selectedTask.id } }">
                 {{ selectedTask.name }}
+                </RouterLink>
               </p>
               <p v-else class="text-sm font-medium text-slate-500">Editar tarea</p>
             </div>
