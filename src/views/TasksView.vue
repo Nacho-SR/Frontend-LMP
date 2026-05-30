@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { RouterLink } from 'vue-router';
 
 import AlertMessage from '../components/ui/AlertMessage.vue';
 import BaseButton from '../components/ui/BaseButton.vue';
@@ -13,15 +14,18 @@ import PageHeader from '../components/ui/PageHeader.vue';
 import PriorityBadge from '../components/ui/PriorityBadge.vue';
 import StatusBadge from '../components/ui/StatusBadge.vue';
 import { useAuthStore } from '../stores/auth.store';
+import { useChartsStore } from '../stores/charts.store';
 import { useProjectsStore } from '../stores/projects.store';
 import { useTasksStore } from '../stores/tasks.store';
 import { useTeamsStore } from '../stores/teams.store';
+import { addTaskToStageRequest, getStagesByChartRequest, moveTaskRequest, updateStageRequest } from '../api/stages.service';
 import { fetchUserList } from '../api/users.service';
 
 const tasksStore = useTasksStore();
 const teamsStore = useTeamsStore();
 const authStore = useAuthStore();
 const projectsStore = useProjectsStore();
+const chartsStore = useChartsStore();
 
 const listError = ref('');
 const createError = ref('');
@@ -34,17 +38,31 @@ const statusFilter = ref('ALL');
 const teamFilter = ref('');
 const allUsers = ref([]);
 
+// Enviar al tablero
+const boardPickerOpen = ref(null);   // taskId cuyo picker está abierto
+const sendingToBoardId = ref(null);  // taskId que se está enviando
+
+// Editar tarea
+const editingTask = ref(null);
+const editForm = reactive({ name: '', priority: '2', description: '', dueDate: '', maxWorkers: '' });
+const savingEdit = ref(false);
+const editError = ref('');
+
 const deleteConfirm = reactive({ open: false, taskId: null, loading: false });
 
 const createForm = reactive({
   name: '',
   teamId: '',
   projectId: '',
+  chartId: '',
   priority: '2',
   description: '',
   dueDate: '',
   maxWorkers: '',
 });
+
+const selectedChartStages = ref([]);
+const loadingChartStages = ref(false);
 
 const STATUS_TABS = [
   { value: 'ALL', label: 'Todas' },
@@ -71,6 +89,13 @@ const projectOptions = computed(() => {
   return projectsStore.projects
     .filter((p) => p.teamId === createForm.teamId && p.status !== 'DELETED')
     .map((p) => ({ value: p.id, label: p.name }));
+});
+
+const chartOptions = computed(() => {
+  if (!createForm.teamId) return [];
+  return chartsStore.charts
+    .filter((c) => c.teamId === createForm.teamId)
+    .map((c) => ({ value: c.id, label: c.name }));
 });
 
 const filteredTasks = computed(() =>
@@ -133,7 +158,26 @@ const isFull = (task) => {
 
 watch(
   () => createForm.teamId,
-  () => { createForm.projectId = ''; },
+  () => {
+    createForm.projectId = '';
+    createForm.chartId = '';
+    selectedChartStages.value = [];
+  },
+);
+
+watch(
+  () => createForm.chartId,
+  async (chartId) => {
+    selectedChartStages.value = [];
+    if (!chartId || !createForm.teamId) return;
+    try {
+      loadingChartStages.value = true;
+      const res = await getStagesByChartRequest(chartId, createForm.teamId);
+      selectedChartStages.value = res.data || [];
+    } catch { /* ignore */ } finally {
+      loadingChartStages.value = false;
+    }
+  },
 );
 
 watch(
@@ -151,11 +195,27 @@ watch(teamFilter, async (teamId) => {
   if (!teamId) return;
   listError.value = '';
   try {
-    await tasksStore.fetchTeamTasks(teamId);
+    await Promise.all([
+      tasksStore.fetchTeamTasks(teamId),
+      teamsStore.fetchMembers(teamId),
+    ]);
   } catch {
     listError.value = 'No se pudieron cargar las tareas del equipo';
   }
 });
+
+const myRole = computed(() => {
+  if (!authStore.user?.id) return null;
+  return teamsStore.members.find((m) => m.userId === authStore.user.id)?.role ?? null;
+});
+
+const canEdit = (task) =>
+  myRole.value === 'OWNER' ||
+  myRole.value === 'MANAGER' ||
+  task.createdBy === authStore.user?.id;
+
+const canDelete = () =>
+  myRole.value === 'OWNER' || myRole.value === 'MANAGER';
 
 const ERRORS = {
   UNAUTHORIZED_TEAM_ACCESS: 'No tienes acceso a este equipo',
@@ -166,6 +226,111 @@ const ERRORS = {
 const mapError = (error, fallback) => {
   const code = error.response?.data?.error?.code;
   return ERRORS[code] || error.response?.data?.message || fallback;
+};
+
+const _stagesCache = ref({});
+
+const DEFAULT_STAGE_NAMES = {
+  'to do': 'PENDING',
+  'in progress': 'IN_PROGRESS',
+  'review': 'REVIEW',
+  'done': 'COMPLETED',
+};
+
+const findStageForStatus = (stages, status) => {
+  const byMapped = stages.find((s) => s.mappedStatus === status);
+  if (byMapped) return byMapped;
+  // Fallback: buscar por nombre canónico si mappedStatus no está guardado en Firestore
+  const name = Object.entries(DEFAULT_STAGE_NAMES).find(([, v]) => v === status)?.[0];
+  if (!name) return null;
+  return stages.find((s) => s.name.toLowerCase() === name) ?? null;
+};
+
+const getChartStages = async (chartId, teamId) => {
+  if (_stagesCache.value[chartId]) return _stagesCache.value[chartId];
+  try {
+    const res = await getStagesByChartRequest(chartId, teamId);
+    const stages = res.data || [];
+    _stagesCache.value[chartId] = stages;
+    // Persiste mappedStatus en stages que tengan nombre canónico pero el campo vacío
+    for (const stage of stages) {
+      if (stage.mappedStatus) continue;
+      const inferred = DEFAULT_STAGE_NAMES[stage.name.toLowerCase()];
+      if (!inferred) continue;
+      try {
+        await updateStageRequest(stage.id, { mappedStatus: inferred });
+        stage.mappedStatus = inferred;
+      } catch { /* sin permiso o error de red — se usará el fallback por nombre */ }
+    }
+    return stages;
+  } catch {
+    return [];
+  }
+};
+
+const moveToPairedStage = async (task, newStatus) => {
+  if (!task.stageId || !task.chartId) return;
+  const stages = await getChartStages(task.chartId, task.teamId);
+  const target = findStageForStatus(stages, newStatus);
+  if (!target || target.id === task.stageId) return;
+  await moveTaskRequest(task.id, task.stageId, target.id);
+  const idx = tasksStore.tasks.findIndex((t) => t.id === task.id);
+  if (idx !== -1) {
+    tasksStore.tasks.splice(idx, 1, { ...tasksStore.tasks[idx], stageId: target.id });
+  }
+};
+
+const openEdit = (task) => {
+  editingTask.value = task;
+  editForm.name = task.name;
+  editForm.priority = String(task.priority ?? 2);
+  editForm.description = task.description || '';
+  editForm.dueDate = task.dueDate ? task.dueDate.split('T')[0] : '';
+  editForm.maxWorkers = getMaxWorkers(task) ? String(getMaxWorkers(task)) : '';
+  editError.value = '';
+};
+
+const handleSaveEdit = async () => {
+  if (!editForm.name.trim() || !editingTask.value) return;
+  try {
+    savingEdit.value = true;
+    editError.value = '';
+    const tags = (editingTask.value.tags || []).filter((t) => !t.startsWith('maxWorkers:'));
+    const max = parseInt(editForm.maxWorkers);
+    if (Number.isFinite(max) && max > 0) tags.push(`maxWorkers:${max}`);
+    const payload = {
+      name: editForm.name.trim(),
+      priority: Number(editForm.priority),
+      description: editForm.description,
+      dueDate: editForm.dueDate ? new Date(editForm.dueDate).toISOString() : null,
+      tags,
+    };
+    await tasksStore.updateTask(editingTask.value.id, payload);
+    editingTask.value = null;
+  } catch (err) {
+    editError.value = err.response?.data?.message || 'No se pudo actualizar la tarea';
+  } finally {
+    savingEdit.value = false;
+  }
+};
+
+const chartsForTask = (task) =>
+  chartsStore.charts.filter((c) => c.teamId === task.teamId);
+
+const handleSendToBoard = async (task, chartId) => {
+  boardPickerOpen.value = null;
+  if (!chartId) return;
+  try {
+    sendingToBoardId.value = task.id;
+    const stages = await getChartStages(chartId, task.teamId);
+    // Busca el stage que corresponde al status actual, o el primero disponible
+    const target = findStageForStatus(stages, task.status) || stages[0];
+    if (!target) return;
+    // PUT /tasks/:id acepta chartId + stageId y maneja taskIds, WIP y status automáticamente
+    await tasksStore.updateTask(task.id, { chartId, stageId: target.id });
+  } catch { /* ignore */ } finally {
+    sendingToBoardId.value = null;
+  }
 };
 
 const handleCreate = async () => {
@@ -190,6 +355,10 @@ const handleCreate = async () => {
     if (createForm.dueDate) {
       payload.dueDate = new Date(createForm.dueDate).toISOString();
     }
+    if (createForm.chartId && selectedChartStages.value.length > 0) {
+      payload.chartId = createForm.chartId;
+      payload.stageId = selectedChartStages.value[0].id;
+    }
 
     await tasksStore.createTask(payload);
     createSuccess.value = 'Tarea creada correctamente';
@@ -198,6 +367,8 @@ const handleCreate = async () => {
     createForm.dueDate = '';
     createForm.priority = '2';
     createForm.maxWorkers = '';
+    createForm.chartId = '';
+    selectedChartStages.value = [];
   } catch (error) {
     createError.value = mapError(error, 'No se pudo crear la tarea');
   } finally {
@@ -206,9 +377,12 @@ const handleCreate = async () => {
 };
 
 const handleAdvance = async (task) => {
+  const snapshot = { ...task };
+  const nextStatus = task.status === 'PENDING' ? 'IN_PROGRESS' : 'REVIEW';
   try {
     advancingId.value = task.id;
     await tasksStore.advanceStatus(task.id);
+    await moveToPairedStage(snapshot, nextStatus);
   } catch {
     // status stays unchanged
   } finally {
@@ -217,9 +391,11 @@ const handleAdvance = async (task) => {
 };
 
 const handleComplete = async (task) => {
+  const snapshot = { ...task };
   try {
     advancingId.value = task.id;
     await tasksStore.completeReview(task.id);
+    await moveToPairedStage(snapshot, 'COMPLETED');
   } catch {
     // ignore
   } finally {
@@ -250,9 +426,11 @@ const handleClaimReview = async (task) => {
 };
 
 const handleReject = async (task) => {
+  const snapshot = { ...task };
   try {
     rejectingId.value = task.id;
     await tasksStore.rejectReview(task.id);
+    await moveToPairedStage(snapshot, 'IN_PROGRESS');
   } catch {
     // ignore
   } finally {
@@ -289,6 +467,8 @@ onMounted(async () => {
     await projectsStore.fetchProjects();
     if (projectOptions.value.length) createForm.projectId = projectOptions.value[0].value;
   } catch { /* ignore */ }
+
+  try { await chartsStore.fetchCharts(); } catch { /* ignore */ }
 
   try {
     const result = await fetchUserList();
@@ -531,7 +711,52 @@ onMounted(async () => {
                   </BaseButton>
                 </template>
 
+                <!-- Ir al tablero kanban (tareas que ya tienen chart asignado) -->
+                <RouterLink
+                  v-if="task.chartId && task.projectId"
+                  :to="`/projects/${task.projectId}/kanban/${task.chartId}`"
+                  class="inline-flex h-8 items-center rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  Ver tablero
+                </RouterLink>
+
+                <!-- Enviar al tablero: solo tareas sin stage asignado -->
+                <template v-if="!task.stageId && chartsForTask(task).length">
+                  <template v-if="boardPickerOpen === task.id">
+                    <select
+                      class="h-8 rounded border border-slate-300 bg-white px-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                      :disabled="sendingToBoardId === task.id"
+                      @change="handleSendToBoard(task, $event.target.value)"
+                      @blur="boardPickerOpen = null"
+                    >
+                      <option value="">Elegir tablero…</option>
+                      <option v-for="chart in chartsForTask(task)" :key="chart.id" :value="chart.id">
+                        {{ chart.name }}
+                      </option>
+                    </select>
+                  </template>
+                  <BaseButton
+                    v-else
+                    variant="secondary"
+                    size="sm"
+                    :loading="sendingToBoardId === task.id"
+                    @click="boardPickerOpen = task.id"
+                  >
+                    → Tablero
+                  </BaseButton>
+                </template>
+
+                <BaseButton
+                  v-if="canEdit(task)"
+                  variant="secondary"
+                  size="sm"
+                  @click="openEdit(task)"
+                >
+                  Editar
+                </BaseButton>
+
                 <button
+                  v-if="canDelete()"
                   type="button"
                   class="danger-button h-8 px-3 text-xs"
                   @click="openDelete(task.id)"
@@ -568,6 +793,13 @@ onMounted(async () => {
               label="Proyecto"
               :options="projectOptions"
               :disabled="!projectOptions.length"
+            />
+            <BaseSelect
+              id="task-chart"
+              v-model="createForm.chartId"
+              label="Tablero (opcional)"
+              :options="[{ value: '', label: 'Sin tablero' }, ...chartOptions]"
+              :disabled="!chartOptions.length || loadingChartStages"
             />
             <BaseSelect
               id="task-priority"
@@ -619,6 +851,48 @@ onMounted(async () => {
         </form>
       </aside>
     </div>
+
+    <!-- Modal editar tarea -->
+    <Teleport to="body">
+      <div
+        v-if="editingTask"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+        @click.self="editingTask = null"
+      >
+        <div class="w-full max-w-md rounded-xl bg-white shadow-xl">
+          <div class="border-b border-slate-100 px-6 py-4">
+            <h2 class="text-base font-semibold text-slate-900">Editar tarea</h2>
+          </div>
+          <div class="space-y-3 px-6 py-4">
+            <BaseInput v-model="editForm.name" label="Nombre" required />
+            <BaseSelect
+              v-model="editForm.priority"
+              label="Prioridad"
+              :options="PRIORITY_OPTIONS"
+            />
+            <BaseInput v-model="editForm.dueDate" label="Fecha límite" type="date" />
+            <BaseInput
+              v-model="editForm.maxWorkers"
+              label="Máx. trabajadores"
+              type="number"
+              min="1"
+              max="20"
+              placeholder="Sin límite"
+            />
+            <BaseTextarea v-model="editForm.description" label="Descripción" :rows="3" />
+            <AlertMessage v-if="editError" type="error" :message="editError" />
+          </div>
+          <div class="flex justify-end gap-2 border-t border-slate-100 px-6 py-4">
+            <BaseButton variant="secondary" size="sm" :disabled="savingEdit" @click="editingTask = null">
+              Cancelar
+            </BaseButton>
+            <BaseButton size="sm" :loading="savingEdit" :disabled="!editForm.name.trim()" @click="handleSaveEdit">
+              Guardar
+            </BaseButton>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <ConfirmDialog
       :open="deleteConfirm.open"

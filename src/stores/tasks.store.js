@@ -134,18 +134,28 @@ export const useTasksStore = defineStore('tasks', {
       if (!currentTask) return;
       const next = NEXT_STATUS[currentTask.status];
       if (!next) return;
-      
+
       const response = await updateTaskStatusRequest(taskId, next);
       const updatedData = response?.data ? response.data : response;
-      
-      if (next === 'REVIEW') updatedData.assignedUserIds = [];
 
       if (this.selectedTask && this.selectedTask.id === taskId) {
-        this.selectedTask = { ...this.selectedTask, ...updatedData };
+        const sel = { ...this.selectedTask, ...updatedData };
+        if (next === 'REVIEW') {
+          sel.workerIds = [...(this.selectedTask.workerIds || []), ...(this.selectedTask.assignedUserIds || [])];
+          sel.assignedUserIds = [];
+        }
+        this.selectedTask = sel;
       }
+
       const idx = this.tasks.findIndex((t) => t.id === taskId);
       if (idx !== -1) {
-        this.tasks[idx] = { ...this.tasks[idx], ...updatedData };
+        const prev = this.tasks[idx];
+        const updated = { ...prev, ...updatedData };
+        if (next === 'REVIEW') {
+          updated.workerIds = [...(prev.workerIds || []), ...(prev.assignedUserIds || [])];
+          updated.assignedUserIds = [];
+        }
+        this.tasks[idx] = updated;
       }
     },
 
@@ -205,14 +215,6 @@ export const useTasksStore = defineStore('tasks', {
       if (idx !== -1) {
         this.tasks[idx] = { ...this.tasks[idx], assignedUserIds: resData.assignedUserIds };
       }
-    },
-
-    async updateTask(taskId, payload) {
-      const response = await updateTaskRequest(taskId, payload);
-      const updated = response.data;
-      const idx = this.tasks.findIndex((t) => t.id === taskId);
-      if (idx !== -1) this.tasks.splice(idx, 1, { ...this.tasks[idx], ...updated });
-      return updated;
     },
 
     async updateTask(taskId, payload) {
