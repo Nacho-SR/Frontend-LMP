@@ -111,6 +111,20 @@ const roleOptions = [
   { value: 'CLIENT', label: 'Cliente' },
 ];
 
+const memberDisplayName = (member) => {
+  if (member.userId === authStore.user?.id) return 'Tu';
+
+  return member.user?.displayName || member.user?.userName || member.userId;
+};
+
+const memberSubtitle = (member) => {
+  const username = member.user?.userName ? `@${member.user.userName}` : '';
+  const email = member.user?.email || '';
+
+  if (username && email) return `${username} - ${email}`;
+  return username || email || `ID: ${member.userId}`;
+};
+
 const ERRORS = {
   TEAM_NOT_FOUND: 'Equipo no encontrado',
   UNAUTHORIZED: 'No tienes acceso a este equipo',
@@ -314,10 +328,10 @@ watch(() => props.teamId, () => { loadTeam(); resetForm(); });
             class="flex flex-col gap-2 px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between"
           >
             <div class="min-w-0">
-              <p class="font-mono text-sm font-medium text-slate-950" :title="member.userId">
-                {{ member.userId === authStore.user?.id ? 'Tú' : member.userId.slice(0, 12) + '…' }}
+              <p class="truncate text-sm font-medium text-slate-950" :title="member.user?.email || member.userId">
+                {{ memberDisplayName(member) }}
               </p>
-              <p class="text-xs text-slate-400">ID: {{ member.userId }}</p>
+              <p class="truncate text-xs text-slate-500">{{ memberSubtitle(member) }}</p>
             </div>
 
             <div class="flex items-center gap-2">
