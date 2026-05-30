@@ -94,13 +94,6 @@ const formatDate = (dateStr) => {
   });
 };
 
-const formatTimestamp = (timestamp) => {  
-  const date = new Date(timestamp._seconds * 1000);
-  return date.toLocaleString(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short'
-  });
-};
 
 const loadTaskData = async () => {
   try {
@@ -344,7 +337,7 @@ onMounted(async () => {
                     {{ userName(comment.posterId) }}
                   </span>
                   <span class="text-xs text-slate-400">
-                    {{ formatTimestamp(comment.createdAt) }}
+                    {{ formatDate(comment.createdAt) }}
                     
                   </span>
                 </div>
