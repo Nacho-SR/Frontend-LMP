@@ -217,12 +217,13 @@ onMounted(async () => {
 <template>
   <section class="space-y-6">
     <div>
-      <RouterLink
-        :to="{ name: 'tasks' }"
-        class="inline-flex items-center gap-1 text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors"
+      <button
+        type="button"
+        @click="router.back()"
+        class="inline-flex items-center gap-1 text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors cursor-pointer"
       >
-        ← Volver a Tareas
-      </RouterLink>
+        ← Volver
+      </button>
     </div>
 
     <AlertMessage v-if="pageError" type="error" :message="pageError" />
