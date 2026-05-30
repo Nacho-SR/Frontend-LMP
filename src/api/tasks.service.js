@@ -29,3 +29,23 @@ export const deleteTaskRequest = async (taskId) => {
   const response = await api.delete(`/tasks/${taskId}`);
   return response.data;
 };
+
+export const getTaskDetailRequest = async (taskId) => {
+  const response = await api.get(`/tasks/${taskId}`);
+  return response.data;
+};
+
+export const getTaskCommentsRequest = async (taskId) => {
+  const response = await api.get(`/tasks/${taskId}/comments`);
+  return response.data;
+};
+
+
+export const postTaskCommentRequest = async (taskId, commentData) => {
+  const response = await api.post(`/tasks/${taskId}/comments`, commentData);
+  return response.data;
+};
+export const deleteTaskCommentRequest = async (taskId,commentId) => {
+  const response = await api.delete(`/tasks/${taskId}/comments/${commentId}`);
+  return response.data;
+};

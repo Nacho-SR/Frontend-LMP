@@ -12,7 +12,8 @@ import RegisterView from '../views/RegisterView.vue';
 import TasksView from '../views/TasksView.vue';
 import KanbanView from '../views/KanbanView.vue';
 import TeamDetailView from '../views/TeamDetailView.vue';
-import TeamsView from '../views/TeamsView.vue';
+import TeamsView from '../views/TeamsView.vue'; 
+import TaskDetailView from '../views/TaskDetailView.vue';
 
 const routes = [
   {
@@ -71,6 +72,12 @@ const routes = [
         path: 'tasks',
         name: 'tasks',
         component: TasksView,
+      },
+      {
+        path: 'tasks/:taskId',
+        name: 'task-detail',
+        component: TaskDetailView,
+        props: true,
       },
       {
         path: 'notifications',
