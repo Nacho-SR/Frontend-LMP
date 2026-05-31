@@ -49,8 +49,8 @@ Pendientes transversales importantes:
 - [ ] Probar flujo completo contra backend real.
 - [ ] Corregir textos con encoding roto (`Ã`, `Â`, etc.).
 - [ ] Conectar dashboard real con `GET /api/dashboard/summary`.
-- [ ] Integrar comentarios de tareas.
-- [ ] Ajustar notificaciones a timestamps ISO 8601.
+- [x] Integrar comentarios de tareas.
+- [x] Ajustar notificaciones a timestamps ISO 8601.
 - [ ] Completar filtros/query params documentados en `API_FRONTEND.md`.
 - [ ] Documentar instalacion y uso del frontend en README.
 - [ ] Preparar capturas o video corto para entrega.
@@ -216,7 +216,7 @@ Pendientes transversales importantes:
 - [x] Integrar `PATCH /api/teams/:teamId`.
 - [x] Integrar `DELETE /api/teams/:teamId` para archivar equipo.
 - [x] Integrar `PATCH /api/teams/:teamId/members/:userId/role`.
-- [ ] Ocultar agregar/quitar miembros si el rol no permite.
+- [x] Ocultar agregar/quitar miembros si el rol no permite.
 - [ ] Manejar error de ultimo `OWNER`.
 - [ ] Mejorar busqueda/seleccion de usuarios al agregar miembro.
 - [ ] Probar permisos por roles de equipo:
@@ -399,8 +399,8 @@ Pendientes transversales importantes:
 - [ ] Agregar filtro por prioridad.
 - [ ] Agregar filtro por responsable.
 - [ ] Agregar paginacion si el backend la requiere.
-- [ ] Integrar detalle de tarea independiente si se decide.
-- [ ] Agregar comentarios en detalle/modal de tarea.
+- [x] Integrar detalle de tarea independiente si se decide.
+- [x] Agregar comentarios en detalle/modal de tarea.
 - [ ] Mejorar manejo de errores, hoy hay varios `catch` silenciosos.
 - [ ] Corregir textos con encoding roto.
 
@@ -432,22 +432,23 @@ Pendientes transversales importantes:
 
 ### Ya Tenemos
 
-- No hay integracion visible de comentarios.
-- El servicio de tareas envia `comment` al cambiar status, pero no existe modulo UI de comentarios.
+- Comentarios integrados en `TaskDetailView`.
+- `fetchTaskComments`, `postTaskComment`, `deleteTaskComment` en `tasks.store.js`.
+- Listar comentarios con autor y fecha.
+- Crear comentario.
+- Eliminar comentario propio (boton visible solo si `posterId === user.id`).
 
-### Falta Critico
+### Falta
 
-- [ ] Crear `comments.service.js`.
-- [ ] Crear store de comentarios o composable local.
-- [ ] Integrar comentarios en modal/detalle de tarea.
-- [ ] Listar comentarios.
-- [ ] Crear comentario.
+- [ ] Crear `comments.service.js` como archivo separado (actualmente la logica esta en `tasks.store.js`).
+- [x] Crear store de comentarios o composable local.
+- [x] Integrar comentarios en modal/detalle de tarea.
+- [x] Listar comentarios.
+- [x] Crear comentario.
 - [ ] Editar comentario propio.
-- [ ] Eliminar comentario propio.
-- [ ] Mostrar autor y fecha.
-- [ ] Manejar permisos:
-  - miembro del equipo puede ver/comentar.
-  - autor u `OWNER/MANAGER` puede editar/eliminar.
+- [x] Eliminar comentario propio.
+- [x] Mostrar autor y fecha.
+- [x] Manejar permisos (autor puede eliminar su comentario).
 
 ### Endpoints Relacionados
 
@@ -483,7 +484,7 @@ Pendientes transversales importantes:
 
 ### Falta
 
-- [ ] Ajustar timestamp a ISO 8601; la vista actual usa `createdAt._seconds`.
+- [x] Ajustar timestamp a ISO 8601; la vista actual usaba `createdAt._seconds`.
 - [ ] Unificar textos a espanol.
 - [ ] Mejorar nombres de metodos en servicio:
   - `deleteNotificationRequest`
