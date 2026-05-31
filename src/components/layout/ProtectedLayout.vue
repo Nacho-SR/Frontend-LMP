@@ -1,15 +1,17 @@
 <script setup>
-import { computed, onMounted } from 'vue';
-import { RouterLink, useRouter } from 'vue-router';
+import { computed, onMounted, watch } from 'vue';
+import { RouterLink, useRoute, useRouter } from 'vue-router';
 
 import { useAuthStore } from '../../stores/auth.store';
 import { useNotificationsStore } from '../../stores/notifications.store';
 
 const authStore = useAuthStore();
 const notificationsStore = useNotificationsStore();
+const route = useRoute();
 const router = useRouter();
 
 onMounted(() => notificationsStore.fetchNotifications());
+watch(() => route.path, () => notificationsStore.fetchNotifications());
 
 const userInitials = computed(() => {
   const source =
