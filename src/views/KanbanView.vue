@@ -74,11 +74,11 @@ const editForm = reactive({
   maxWorkers: '',
 });
 
-const PRIORITY_LABEL = { 1: 'Baja', 2: 'Media', 3: 'Alta', 4: 'Urgente' };
+const PRIORITY_LABEL = { 1: 'Low', 2: 'Medium', 3: 'High', 4: 'Urgent' };
 
 const formatDate = (str) => {
   if (!str) return null;
-  return new Date(str).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+  return new Date(str).toLocaleDateString({ day: '2-digit', month: 'short', year: 'numeric' });
 };
 
 const getMaxWorkers = (task) => {
@@ -154,7 +154,7 @@ const handleUpdateTask = async () => {
     }
     taskDetailMode.value = 'view';
   } catch (error) {
-    editError.value = error.response?.data?.message || 'No se pudo actualizar la tarea';
+    editError.value = error.response?.data?.message || 'Unable to update the task.';
   } finally {
     savingEdit.value = false;
   }
@@ -250,9 +250,9 @@ const handleAssignSelectedUser = async () => {
     await tasksStore.assignUsers(selectedTask.value.id, [...current, assignUserId.value]);
     syncSelectedTask();
     assignUserId.value = '';
-    assignSuccess.value = 'Miembro asignado correctamente';
+    assignSuccess.value = 'Member assigned successfully';
   } catch (error) {
-    assignError.value = error.response?.data?.message || 'No se pudo asignar el miembro';
+    assignError.value = error.response?.data?.message || 'Unable to assign member';
   } finally {
     assigningTask.value = false;
   }
@@ -270,9 +270,9 @@ const handleRemoveAssignedUser = async (userId) => {
 
     await tasksStore.assignUsers(selectedTask.value.id, nextAssignedUserIds);
     syncSelectedTask();
-    assignSuccess.value = 'Miembro removido de la tarea';
+    assignSuccess.value = 'Member removed from task';
   } catch (error) {
-    assignError.value = error.response?.data?.message || 'No se pudo quitar el miembro';
+    assignError.value = error.response?.data?.message || 'Unable to remove the member';
   } finally {
     removingAssigneeId.value = '';
   }
@@ -290,8 +290,8 @@ const handleAdvanceTask = async () => {
   } catch (err) {
     const code = err.response?.data?.error?.code;
     stageError.value = code === 'DESTINATION_WIP_LIMIT_REACHED'
-      ? 'Límite WIP alcanzado en la columna destino'
-      : err.response?.data?.message || 'No se pudo mover la tarea a la etapa correspondiente';
+      ? 'WIP Limit reached on destination stage'
+      : err.response?.data?.message || 'Unable to add task to stage';
   }
   syncSelectedTask();
   advancingTask.value = false;
@@ -308,8 +308,8 @@ const handleCompleteTask = async () => {
   } catch (err) {
     const code = err.response?.data?.error?.code;
     stageError.value = code === 'DESTINATION_WIP_LIMIT_REACHED'
-      ? 'Límite WIP alcanzado en la columna destino'
-      : err.response?.data?.message || 'No se pudo mover la tarea a la etapa correspondiente';
+      ? 'WIP Limit reached on destination stage'
+      : err.response?.data?.message || 'Cound\'t move task to stage';
   }
   syncSelectedTask();
   advancingTask.value = false;
@@ -336,8 +336,8 @@ const handleRejectTask = async () => {
   } catch (err) {
     const code = err.response?.data?.error?.code;
     stageError.value = code === 'DESTINATION_WIP_LIMIT_REACHED'
-      ? 'Límite WIP alcanzado en la columna destino'
-      : err.response?.data?.message || 'No se pudo mover la tarea a la etapa correspondiente';
+      ? 'WIP Limit reached on destination stage'
+      : err.response?.data?.message || 'Cound\'t move task to stage';
   }
   syncSelectedTask();
   rejectingTask.value = false;
@@ -349,10 +349,10 @@ const createError = ref('');
 const createSuccess = ref('');
 
 const PRIORITY_OPTIONS = [
-  { value: '1', label: 'Baja' },
-  { value: '2', label: 'Media' },
-  { value: '3', label: 'Alta' },
-  { value: '4', label: 'Urgente' },
+  { value: '1', label: 'Low' },
+  { value: '2', label: 'Medium' },
+  { value: '3', label: 'High' },
+  { value: '4', label: 'Urgent' },
 ];
 
 const createForm = reactive({
@@ -414,11 +414,11 @@ const priorityDot = (priority) => {
 };
 
 const statusLabel = {
-  PENDING: 'Pendiente',
-  IN_PROGRESS: 'En progreso',
-  REVIEW: 'Revisión',
-  COMPLETED: 'Completado',
-  CANCELLED: 'Cancelado',
+  PENDING: 'Pending',
+  IN_PROGRESS: 'In progress',
+  REVIEW: 'Review',
+  COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled',
 };
 
 const statusColor = {
@@ -484,7 +484,7 @@ const onColumnDrop = async (toStageId) => {
     );
   } catch {
     await stagesStore.fetchStages(props.chartId, chart.value.teamId);
-    stageError.value = 'No se pudo reordenar las etapas';
+    stageError.value = 'Could\'t reorder stages';
   }
 };
 
@@ -529,8 +529,8 @@ const onDrop = async (toStageId) => {
     const code = error.response?.data?.error?.code;
     stageError.value =
       code === 'DESTINATION_WIP_LIMIT_REACHED'
-        ? 'Límite WIP alcanzado en la columna destino'
-        : error.response?.data?.message || 'No se pudo mover la tarea';
+      ? 'WIP Limit reached on destination stage'
+        : error.response?.data?.message || 'Unable to move the task';
   } finally {
     movingTaskId.value = null;
   }
@@ -549,7 +549,7 @@ const handleCreateStage = async () => {
     newStageName.value = '';
     showCreateStage.value = false;
   } catch (error) {
-    stageError.value = error.response?.data?.message || 'No se pudo crear la etapa';
+    stageError.value = error.response?.data?.message || 'Unable to create stage';
   } finally {
     creatingStage.value = false;
   }
@@ -568,7 +568,7 @@ const handleSaveStage = async (stageId) => {
     await stagesStore.updateStage(stageId, { name: editingStageName.value.trim() });
     editingStageId.value = null;
   } catch (error) {
-    stageError.value = error.response?.data?.message || 'No se pudo actualizar la etapa';
+    stageError.value = error.response?.data?.message || 'Unable to update stage';
   } finally {
     savingStageId.value = null;
   }
@@ -583,8 +583,8 @@ const handleDeleteStage = async (stageId) => {
     const code = error.response?.data?.error?.code;
     stageError.value =
       code === 'STAGE_HAS_TASKS'
-        ? 'La etapa tiene tareas. Muévelas antes de eliminarla.'
-        : error.response?.data?.message || 'No se pudo eliminar la etapa';
+        ? 'The stage contains tasks. Move them before trying to delete it.'
+        : error.response?.data?.message || 'Unable to delete stage';
   } finally {
     deletingStageId.value = null;
   }
@@ -634,9 +634,9 @@ const handleCreateTask = async () => {
     createForm.priority = '2';
     createForm.maxWorkers = '';
     showCreateTask.value = false;
-    createSuccess.value = 'Tarea creada correctamente';
+    createSuccess.value = 'Task created';
   } catch (error) {
-    createError.value = error.response?.data?.message || 'No se pudo crear la tarea';
+    createError.value = error.response?.data?.message || 'Unable to create task';
   } finally {
     savingTask.value = false;
   }
@@ -651,7 +651,7 @@ onMounted(async () => {
       found = chartsStore.selectedChart;
     }
     if (!found) {
-      pageError.value = 'Tablero no encontrado';
+      pageError.value = 'Chart not found';
       return;
     }
     chart.value = found;
@@ -667,7 +667,7 @@ onMounted(async () => {
     // Repara stages que tienen nombre canónico pero mappedStatus vacío en Firestore
     repairStageMappings();
   } catch {
-    pageError.value = 'No se pudo cargar el tablero';
+    pageError.value = 'Unable to load chart';
   } finally {
     loading.value = false;
   }
@@ -682,7 +682,7 @@ onMounted(async () => {
         :to="{ name: 'project-detail', params: { projectId } }"
         class="inline-flex items-center gap-1 text-sm font-medium text-slate-500 underline underline-offset-4"
       >
-        ← Proyecto
+        ← Project
       </RouterLink>
       <div class="mt-2 flex items-center justify-between gap-4">
         <PageHeader :title="chart?.name || 'Tablero'" subtitle="Kanban" />
@@ -692,7 +692,7 @@ onMounted(async () => {
           class="shrink-0 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
           @click="showCreateTask = true; createError = ''; createSuccess = ''"
         >
-          + Nueva tarea
+          + New task
         </button>
       </div>
     </div>
@@ -842,7 +842,7 @@ onMounted(async () => {
               </div>
 
               <p v-if="!tasksByStage[stage.id]?.length" class="py-4 text-center text-xs text-slate-400">
-                Sin tareas
+                No tasks
               </p>
             </div>
           </div>
@@ -853,7 +853,7 @@ onMounted(async () => {
               v-if="showCreateStage"
               class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
             >
-              <p class="mb-2 text-sm font-semibold text-slate-700">Nueva etapa</p>
+              <p class="mb-2 text-sm font-semibold text-slate-700">New stage</p>
               <input
                 v-model="newStageName"
                 placeholder="Nombre de la etapa"
@@ -868,14 +868,14 @@ onMounted(async () => {
                   :disabled="creatingStage"
                   @click="handleCreateStage"
                 >
-                  {{ creatingStage ? 'Creando...' : 'Crear' }}
+                  {{ creatingStage ? 'Creating...' : 'Create' }}
                 </button>
                 <button
                   type="button"
                   class="rounded border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50"
                   @click="showCreateStage = false; newStageName = ''"
                 >
-                  Cancelar
+                  Cancel
                 </button>
               </div>
             </div>
@@ -886,7 +886,7 @@ onMounted(async () => {
               class="flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-slate-300 py-4 text-sm text-slate-400 hover:border-indigo-400 hover:text-indigo-500"
               @click="showCreateStage = true"
             >
-              + Agregar etapa
+              + Add stage
             </button>
           </div>
 
@@ -914,7 +914,7 @@ onMounted(async () => {
                 {{ selectedTask.name }}
                 </RouterLink>
               </p>
-              <p v-else class="text-sm font-medium text-slate-500">Editar tarea</p>
+              <p v-else class="text-sm font-medium text-slate-500">Edit task</p>
             </div>
             <button
               type="button"
@@ -946,7 +946,7 @@ onMounted(async () => {
                   'bg-green-50 text-green-700'
                 ]"
               >
-                {{ PRIORITY_LABEL[selectedTask.priority] || 'Media' }}
+                {{ PRIORITY_LABEL[selectedTask.priority] || 'Medium' }}
               </span>
             </div>
 
@@ -954,7 +954,7 @@ onMounted(async () => {
             <p v-if="selectedTask.description" class="text-sm text-slate-600">
               {{ selectedTask.description }}
             </p>
-            <p v-else class="text-sm text-slate-400 italic">Sin descripción</p>
+            <p v-else class="text-sm text-slate-400 italic">No description</p>
 
             <!-- Metadatos -->
             <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
@@ -974,7 +974,7 @@ onMounted(async () => {
 
             <!-- Asignados -->
             <div v-if="selectedTask.assignedUserIds?.length">
-              <p class="mb-1 text-xs font-medium text-slate-400">Asignado a</p>
+              <p class="mb-1 text-xs font-medium text-slate-400">Assinged to</p>
               <div class="flex flex-wrap gap-1">
                 <span
                   v-for="uid in selectedTask.assignedUserIds"
@@ -1005,14 +1005,14 @@ onMounted(async () => {
                   :disabled="!assignUserId || isTaskFull"
                   @click="handleAssignSelectedUser"
                 >
-                  Asignar
+                  Assign 
                 </BaseButton>
               </div>
               <p v-if="isTaskFull" class="mt-2 text-xs text-slate-500">
-                La tarea ya alcanzÃ³ el mÃ¡ximo de trabajadores.
+                Task is already full of workers
               </p>
               <p v-else-if="!assignableMemberOptions.length" class="mt-2 text-xs text-slate-500">
-                Todos los miembros disponibles ya estÃ¡n asignados.
+                All assignable members are already assigned
               </p>
               <AlertMessage v-if="assignError" type="error" :message="assignError" class="mt-3" />
               <AlertMessage v-if="assignSuccess" type="success" :message="assignSuccess" class="mt-3" />
@@ -1023,31 +1023,31 @@ onMounted(async () => {
           <div v-else class="px-6 py-4">
             <div class="grid gap-3 sm:grid-cols-2">
               <div class="sm:col-span-2">
-                <BaseInput id="et-name" v-model="editForm.name" label="Nombre" required />
+                <BaseInput id="et-name" v-model="editForm.name" label="Name" required />
               </div>
               <BaseSelect
                 id="et-priority"
                 v-model="editForm.priority"
-                label="Prioridad"
+                label="Priority"
                 :options="PRIORITY_OPTIONS"
               />
-              <BaseInput id="et-due" v-model="editForm.dueDate" label="Fecha límite" type="date" />
+              <BaseInput id="et-due" v-model="editForm.dueDate" label="Limit date" type="date" />
               <BaseInput
                 id="et-workers"
                 v-model="editForm.maxWorkers"
-                label="Máx. trabajadores"
+                label="Max. workers"
                 type="number"
                 min="1"
                 max="20"
-                placeholder="Sin límite"
+                placeholder="No limit"
               />
               <div class="sm:col-span-2">
-                <BaseTextarea id="et-desc" v-model="editForm.description" label="Descripción" :rows="3" />
+                <BaseTextarea id="et-desc" v-model="editForm.description" label="Description" :rows="3" />
               </div>
             </div>
             <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50/70 p-3">
               <div class="flex items-center justify-between gap-3">
-                <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Miembros asignados</p>
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Assigned members</p>
                 <span class="text-xs text-slate-500">
                   {{ selectedTask.assignedUserIds?.length || 0 }}{{ getMaxWorkers(selectedTask) ? `/${getMaxWorkers(selectedTask)}` : '' }}
                 </span>
@@ -1055,7 +1055,7 @@ onMounted(async () => {
 
               <div class="mt-3 flex flex-wrap gap-2">
                 <span v-if="!selectedTask.assignedUserIds?.length" class="text-sm text-slate-500">
-                  Nadie asignado
+                  No one assinged
                 </span>
                 <span
                   v-for="uid in selectedTask.assignedUserIds"
@@ -1067,7 +1067,7 @@ onMounted(async () => {
                     type="button"
                     class="rounded-full px-1 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:pointer-events-none disabled:opacity-50"
                     :disabled="removingAssigneeId === uid || assigningTask"
-                    :aria-label="`Quitar a ${userName(uid) || uid}`"
+                    :aria-label="`Remove ${userName(uid) || uid}`"
                     @click="handleRemoveAssignedUser(uid)"
                   >
                     {{ removingAssigneeId === uid ? '...' : 'x' }}
@@ -1080,8 +1080,8 @@ onMounted(async () => {
                   <BaseSelect
                     id="edit-task-member-assignee"
                     v-model="assignUserId"
-                    label="Agregar miembro"
-                    placeholder="Selecciona un miembro"
+                    label="Add member"
+                    placeholder="Select a member"
                     :options="assignableMemberOptions"
                     :disabled="assigningTask || isTaskFull || !assignableMemberOptions.length"
                   />
@@ -1093,15 +1093,15 @@ onMounted(async () => {
                   :disabled="!assignUserId || isTaskFull"
                   @click="handleAssignSelectedUser"
                 >
-                  Agregar
+                  Add
                 </BaseButton>
               </div>
 
               <p v-if="isTaskFull" class="mt-2 text-xs text-slate-500">
-                La tarea ya alcanzÃ³ el mÃ¡ximo de trabajadores.
+                The task is already full of workers
               </p>
               <p v-else-if="!assignableMemberOptions.length" class="mt-2 text-xs text-slate-500">
-                Todos los miembros disponibles ya estÃ¡n asignados.
+                All available members have already been assinged
               </p>
               <AlertMessage v-if="assignError" type="error" :message="assignError" class="mt-3" />
               <AlertMessage v-if="assignSuccess" type="success" :message="assignSuccess" class="mt-3" />
@@ -1120,7 +1120,7 @@ onMounted(async () => {
                 :loading="joiningTask"
                 @click="handleJoinTask"
               >
-                Asignarme
+                Assign me
               </BaseButton>
 
               <!-- Avanzar estado: solo si soy asignado en PENDING o IN_PROGRESS -->
@@ -1131,7 +1131,7 @@ onMounted(async () => {
                 :loading="advancingTask"
                 @click="handleAdvanceTask"
               >
-                {{ selectedTask.status === 'PENDING' ? 'Iniciar' : 'Enviar a revisión' }}
+                {{ selectedTask.status === 'PENDING' ? 'Start' : 'Send to review' }}
               </BaseButton>
 
               <!-- Tomar revisión: tarea en REVIEW, no soy el asignado actual y no trabajé en ella -->
@@ -1142,7 +1142,7 @@ onMounted(async () => {
                 :loading="joiningTask"
                 @click="handleClaimReviewTask"
               >
-                Asignar revisión
+                Assign review
               </BaseButton>
 
               <!-- Acciones del revisor asignado -->
@@ -1153,27 +1153,27 @@ onMounted(async () => {
                   :loading="rejectingTask"
                   @click="handleRejectTask"
                 >
-                  Regresar a progreso
+                  Return to progress
                 </BaseButton>
                 <BaseButton
                   size="sm"
                   :loading="advancingTask"
                   @click="handleCompleteTask"
                 >
-                  Completar
+                  Complete
                 </BaseButton>
               </template>
 
               <!-- Gestión (OWNER/MANAGER) -->
               <template v-if="canManageStages">
-                <BaseButton variant="secondary" size="sm" @click="openEditMode">Editar</BaseButton>
-                <BaseButton variant="danger" size="sm" @click="deleteConfirm.open = true">Eliminar</BaseButton>
+                <BaseButton variant="secondary" size="sm" @click="openEditMode">Edit</BaseButton>
+                <BaseButton variant="danger" size="sm" @click="deleteConfirm.open = true">Delete</BaseButton>
               </template>
-              <BaseButton variant="secondary" size="sm" @click="selectedTask = null">Cerrar</BaseButton>
+              <BaseButton variant="secondary" size="sm" @click="selectedTask = null">Close</BaseButton>
             </template>
             <template v-else>
-              <BaseButton variant="secondary" size="sm" :disabled="savingEdit" @click="taskDetailMode = 'view'; editError = ''">Cancelar</BaseButton>
-              <BaseButton size="sm" :loading="savingEdit" :disabled="!editForm.name.trim()" @click="handleUpdateTask">Guardar</BaseButton>
+              <BaseButton variant="secondary" size="sm" :disabled="savingEdit" @click="taskDetailMode = 'view'; editError = ''">Cancel</BaseButton>
+              <BaseButton size="sm" :loading="savingEdit" :disabled="!editForm.name.trim()" @click="handleUpdateTask">Save</BaseButton>
             </template>
           </div>
         </div>
@@ -1183,9 +1183,9 @@ onMounted(async () => {
 
   <ConfirmDialog
     :open="deleteConfirm.open"
-    title="¿Eliminar tarea?"
-    description="Esta acción eliminará la tarea permanentemente. No se puede deshacer."
-    confirm-label="Eliminar"
+    title="Delete task?"
+    description="This CANNOT be undone"
+    confirm-label="Delete"
     confirm-variant="danger"
     :loading="deleteConfirm.loading"
     @confirm="handleDeleteTask"
@@ -1204,40 +1204,40 @@ onMounted(async () => {
 
         <div class="relative w-full max-w-lg rounded-lg border border-slate-200 bg-white p-6 shadow-lg">
           <h2 class="text-base font-semibold text-slate-950">
-            Nueva tarea
+            New task
             <span class="ml-1 font-normal text-slate-400 text-sm">→ {{ stagesStore.stages[0]?.name || 'To Do' }}</span>
           </h2>
 
           <div class="mt-4 grid gap-3 sm:grid-cols-2">
             <div class="sm:col-span-2">
-              <BaseInput id="kt-name" v-model="createForm.name" label="Nombre" required />
+              <BaseInput id="kt-name" v-model="createForm.name" label="Name" required />
             </div>
             <BaseSelect
               id="kt-priority"
               v-model="createForm.priority"
-              label="Prioridad"
+              label="Priority"
               :options="PRIORITY_OPTIONS"
             />
             <BaseInput
               id="kt-due"
               v-model="createForm.dueDate"
-              label="Fecha límite"
+              label="Date limit"
               type="date"
             />
             <BaseInput
               id="kt-workers"
               v-model="createForm.maxWorkers"
-              label="Máx. trabajadores"
+              label="Max. workers"
               type="number"
               min="1"
               max="20"
-              placeholder="Sin límite"
+              placeholder="No limit"
             />
             <div class="sm:col-span-2">
               <BaseTextarea
                 id="kt-desc"
                 v-model="createForm.description"
-                label="Descripción"
+                label="Description"
                 :rows="3"
               />
             </div>
@@ -1253,14 +1253,14 @@ onMounted(async () => {
               :disabled="savingTask"
               @click="showCreateTask = false"
             >
-              Cancelar
+              Cancel
             </button>
             <BaseButton
               :loading="savingTask"
               :disabled="!createForm.name.trim()"
               @click="handleCreateTask"
             >
-              Crear tarea
+              Create task
             </BaseButton>
           </div>
         </div>
