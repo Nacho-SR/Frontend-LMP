@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, reactive, ref } from 'vue';
+import { onMounted, reactive, ref, computed } from 'vue'; // Added computed
 import { RouterLink } from 'vue-router';
 
 import AlertMessage from '../components/ui/AlertMessage.vue';
@@ -20,7 +20,18 @@ const isModifying = ref(false);
 const statusMessage = ref('');
 const errorMessage = ref('');
 
+const onlyUnread = ref(false);
+
 const deleteConfirm = reactive({ open: false, notificationId: null, loading: false });
+
+const filteredNotifications = computed(() => {
+  const list = notificationsStore.notifications || [];
+  if (onlyUnread.value) {
+    return list.filter(notification => !notification.read);
+  }
+  return list;
+});
+
 const formatDate = (dateStr) => {
   if (!dateStr) return null;
   return new Date(dateStr).toLocaleDateString('es-MX', {
@@ -86,14 +97,32 @@ onMounted(() => notificationsStore.fetchNotifications());
 
 <template>
   <section class="space-y-6">
-      <div class="flex items-end justify-between border-b border-gray-100 pb-4 mb-6">
-        <div>
-          <PageHeader title="Bandeja" subtitle="Notificaciones" class="m-0" />
+    <div class="sticky top-16 z-10 flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 bg-gray-100 pb-4 mb-6 gap-4">
+      <div>
+        <PageHeader title="Bandeja" subtitle="Notificaciones" class="m-0" />
+      </div>
+      
+      <div class="flex items-center gap-3 self-end sm:self-auto">
+        <div class="inline-flex rounded-lg bg-gray-200 p-1 text-xs sm:text-sm shadow-inner">
+          <button 
+            @click="onlyUnread = false"
+            :class="[!onlyUnread ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900']"
+            class="rounded-md px-3 py-1.5 font-medium transition-all"
+          >
+            All
+          </button>
+          <button 
+            @click="onlyUnread = true"
+            :class="[onlyUnread ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900']"
+            class="rounded-md px-3 py-1.5 font-medium transition-all"
+          >
+            Unread
+          </button>
         </div>
-        
-        <button @click="handleReadAll" class="rounded-lg px-5 py-2 text-b font-semibold text-orange-700 bg-orange-50 hover:bg-orange-100 transition-colors border border-orange-200 shadow-sm">
+        <button @click="handleReadAll" class="rounded-lg px-4 py-2 text-xs sm:text-sm font-semibold text-orange-700 bg-orange-50 hover:bg-orange-100 transition-colors border border-orange-200 shadow-sm whitespace-nowrap">
           Read All
         </button>
+      </div>
     </div>
     <AlertMessage v-if="errorMessage" type="error" :message="errorMessage" />
     <AlertMessage v-if="statusMessage" type="success" :message="statusMessage" />
@@ -102,16 +131,19 @@ onMounted(() => notificationsStore.fetchNotifications());
         <LoadingState v-if="notificationsStore.loading" message="Cargando notificationes..." />
 
         <div
-          v-else-if="!notificationsStore.notifications.length"
+          v-else-if="!filteredNotifications.length"
           class="rounded-lg border border-slate-200 bg-white shadow-sm"
         >
-          <EmptyState title="Sin notificaciones" description="Aun no tienes notificaciones.">
-            </EmptyState>
+          <EmptyState 
+            :title="onlyUnread ? 'No unread notifications' : 'No notifications'" 
+            :description="onlyUnread ? 'You have no notifications to read' : 'There arent any messages for you.'"
+          />
         </div>
 
         <div v-else class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-          <div class="grid divide-y divide-slate-100"> <article
-              v-for="notification in notificationsStore.notifications"
+          <div class="grid divide-y divide-slate-100"> 
+            <article
+              v-for="notification in filteredNotifications"
               :key="notification.id"
               class="flex flex-col justify-between p-5 transition-colors hover:bg-slate-50"
             >
@@ -156,7 +188,7 @@ onMounted(() => notificationsStore.fetchNotifications());
         </div>
       </div>
     </div>
-  <ConfirmDialog
+    <ConfirmDialog
       :open="deleteConfirm.open"
       title="Delete notification?"
       description="This is permanent and CANNOT be undone."
