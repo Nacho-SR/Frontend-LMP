@@ -27,10 +27,10 @@ const createForm = reactive({ name: '', description: '', password: '' });
 const joinForm = reactive({ teamId: '', password: '' });
 
 const JOIN_ERRORS = {
-  TEAM_NOT_FOUND: 'No existe un equipo con ese ID',
-  TEAM_NOT_ACTIVE: 'El equipo no está activo',
-  USER_ALREADY_IN_TEAM: 'Ya perteneces a este equipo',
-  INVALID_TEAM_PASSWORD: 'Contraseña de equipo incorrecta',
+  TEAM_NOT_FOUND: 'No team with this id',
+  TEAM_NOT_ACTIVE: 'This team is no longer active',
+  USER_ALREADY_IN_TEAM: 'You already belong at a team',
+  INVALID_TEAM_PASSWORD: 'Incorrect password',
 };
 
 const mapError = (error, fallback) => {
@@ -48,7 +48,7 @@ const handleCreateTeam = async () => {
     createForm.password = '';
     activeForm.value = null;
   } catch (error) {
-    createError.value = mapError(error, 'No se pudo crear el equipo');
+    createError.value = mapError(error, 'Unable to create team');
   } finally {
     creating.value = false;
   }
@@ -63,7 +63,7 @@ const handleJoinTeam = async () => {
     joinForm.password = '';
     activeForm.value = null;
   } catch (error) {
-    joinError.value = mapError(error, 'No se pudo unir al equipo');
+    joinError.value = mapError(error, 'Unable to join team');
   } finally {
     joining.value = false;
   }
@@ -74,21 +74,20 @@ onMounted(() => teamsStore.fetchTeams());
 
 <template>
   <section class="space-y-6">
-    <PageHeader title="Equipos" subtitle="Colaboración" />
+    <PageHeader title="Teams" subtitle="Collaboration" />
 
     <div class="space-y-6">
       <!-- Lista de equipos -->
       <div>
-        <LoadingState v-if="teamsStore.loading" message="Cargando equipos..." />
+        <LoadingState v-if="teamsStore.loading" message="Loading teams..." />
 
         <div
           v-else-if="!teamsStore.teams.length"
           class="rounded-lg border border-slate-200 bg-white shadow-sm"
         >
           <EmptyState
-            title="Todavía no perteneces a ningún equipo"
-            description="Crea uno nuevo o únete con el ID y contraseña de un equipo existente."
-          >
+            title="You are not in any team yeat"
+            description="Create one or join an already existing one.">
             <template #icon>
               <svg class="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -111,7 +110,7 @@ onMounted(() => teamsStore.fetchTeams());
             </div>
 
             <p class="mt-2 line-clamp-2 flex-1 text-sm text-slate-600">
-              {{ team.description || 'Sin descripción' }}
+              {{ team.description || 'No description' }}
             </p>
 
             <div class="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
@@ -122,7 +121,7 @@ onMounted(() => teamsStore.fetchTeams());
                 :to="{ name: 'team-detail', params: { teamId: team.id } }"
                 class="secondary-button"
               >
-                Ver equipo
+                View team
               </RouterLink>
             </div>
           </article>
@@ -143,7 +142,7 @@ onMounted(() => teamsStore.fetchTeams());
             ]"
             @click="toggleForm('create')"
           >
-            + Crear equipo
+            + Create team
           </button>
           <button
             type="button"
@@ -155,7 +154,7 @@ onMounted(() => teamsStore.fetchTeams());
             ]"
             @click="toggleForm('join')"
           >
-            Unirse
+            Join
           </button>
         </div>
 
@@ -166,15 +165,15 @@ onMounted(() => teamsStore.fetchTeams());
           @submit.prevent="handleCreateTeam"
         >
           <div class="space-y-1">
-            <BaseInput id="team-name" v-model="createForm.name" label="Nombre" required />
-            <BaseTextarea id="team-desc" v-model="createForm.description" label="Descripción" :rows="2" />
-            <BaseInput id="team-password" v-model="createForm.password" label="Contraseña de acceso" type="password" minlength="6" required />
+            <BaseInput id="team-name" v-model="createForm.name" label="Name" required />
+            <BaseTextarea id="team-desc" v-model="createForm.description" label="Description" :rows="2" />
+            <BaseInput id="team-password" v-model="createForm.password" label="Access password" type="password" minlength="6" required />
           </div>
 
           <AlertMessage v-if="createError" type="error" :message="createError" class="mt-3" />
 
           <BaseButton type="submit" :loading="creating" class="mt-4 w-full">
-            Crear equipo
+            Create team
           </BaseButton>
         </form>
 
@@ -192,7 +191,7 @@ onMounted(() => teamsStore.fetchTeams());
           <AlertMessage v-if="joinError" type="error" :message="joinError" class="mt-3" />
 
           <BaseButton type="submit" variant="secondary" :loading="joining" class="mt-4 w-full justify-center">
-            Unirse
+            Join
           </BaseButton>
         </form>
       </div>
