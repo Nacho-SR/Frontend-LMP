@@ -27,10 +27,10 @@ const handleRegister = async () => {
   } catch (error) {
     const code = error.response?.data?.error?.code;
     const errorMap = {
-      EMAIL_ALREADY_IN_USE: 'Ya existe una cuenta con ese email',
-      USERNAME_ALREADY_IN_USE: 'Ese nombre de usuario ya está en uso',
+      EMAIL_ALREADY_IN_USE: 'Email already on use',
+      USERNAME_ALREADY_IN_USE: 'Username already taken',
     };
-    errorMessage.value = errorMap[code] || error.response?.data?.message || 'No se pudo crear la cuenta';
+    errorMessage.value = errorMap[code] || error.response?.data?.message || 'Unable to create account';
   } finally {
     loading.value = false;
   }
@@ -45,13 +45,13 @@ const handleRegister = async () => {
           TaskFlow
         </p>
         <h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
-          Crear cuenta
+          Create account
         </h1>
       </div>
 
       <form @submit.prevent="handleRegister">
         <div class="form-field">
-          <label for="displayName">Nombre</label>
+          <label for="displayName">Name</label>
           <input
             id="displayName"
             v-model="form.displayName"
@@ -63,7 +63,7 @@ const handleRegister = async () => {
         </div>
 
         <div class="form-field">
-          <label for="userName">Usuario</label>
+          <label for="userName">User</label>
           <input
             id="userName"
             v-model="form.userName"
@@ -95,33 +95,29 @@ const handleRegister = async () => {
             autocomplete="new-password"
             required
             minlength="6"
-            class="text-input"
-          />
+            class="text-input"/>
         </div>
 
         <p
           v-if="errorMessage"
-          class="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
-        >
+          class="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {{ errorMessage }}
         </p>
 
         <button
           type="submit"
           :disabled="loading"
-          class="primary-button w-full"
-        >
-          {{ loading ? 'Creando...' : 'Crear cuenta' }}
+          class="primary-button w-full">
+          {{ loading ? 'Create...' : 'Create account' }}
         </button>
       </form>
 
       <p class="mt-6 text-center text-sm text-slate-600">
-        Ya tienes cuenta?
+        Have an account?
         <RouterLink
           :to="{ name: 'login' }"
-          class="font-medium text-slate-950 underline underline-offset-4"
-        >
-          Iniciar sesion
+          class="font-medium text-slate-950 underline underline-offset-4">
+          Login
         </RouterLink>
       </p>
     </section>
