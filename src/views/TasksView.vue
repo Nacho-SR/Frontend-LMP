@@ -18,7 +18,7 @@ import { useChartsStore } from '../stores/charts.store';
 import { useProjectsStore } from '../stores/projects.store';
 import { useTasksStore } from '../stores/tasks.store';
 import { useTeamsStore } from '../stores/teams.store';
-import { addTaskToStageRequest, getStagesByChartRequest, moveTaskRequest, updateStageRequest } from '../api/stages.service';
+import { getStagesByChartRequest, moveTaskRequest, updateStageRequest } from '../api/stages.service';
 import { fetchUserList } from '../api/users.service';
 
 const tasksStore = useTasksStore();
@@ -158,10 +158,15 @@ const isFull = (task) => {
 
 watch(
   () => createForm.teamId,
-  () => {
+  async (teamId) => {
     createForm.projectId = '';
     createForm.chartId = '';
     selectedChartStages.value = [];
+    if (!teamId) return;
+    const hasProjects = projectsStore.projects.some((p) => p.teamId === teamId);
+    if (!hasProjects) {
+      try { await projectsStore.fetchProjects(); } catch {}
+    }
   },
 );
 
@@ -174,19 +179,8 @@ watch(
       loadingChartStages.value = true;
       const res = await getStagesByChartRequest(chartId, createForm.teamId);
       selectedChartStages.value = res.data || [];
-    } catch { /* ignore */ } finally {
+    } catch {} finally {
       loadingChartStages.value = false;
-    }
-  },
-);
-
-watch(
-  () => createForm.teamId,
-  async (teamId) => {
-    if (!teamId) return;
-    const hasProjects = projectsStore.projects.some((p) => p.teamId === teamId);
-    if (!hasProjects) {
-      try { await projectsStore.fetchProjects(); } catch { /* ignore */ }
     }
   },
 );
@@ -228,7 +222,7 @@ const mapError = (error, fallback) => {
   return ERRORS[code] || error.response?.data?.message || fallback;
 };
 
-const _stagesCache = ref({});
+const _stagesCache = {};
 
 const DEFAULT_STAGE_NAMES = {
   'to do': 'PENDING',
@@ -247,11 +241,11 @@ const findStageForStatus = (stages, status) => {
 };
 
 const getChartStages = async (chartId, teamId) => {
-  if (_stagesCache.value[chartId]) return _stagesCache.value[chartId];
+  if (_stagesCache[chartId]) return _stagesCache[chartId];
   try {
     const res = await getStagesByChartRequest(chartId, teamId);
     const stages = res.data || [];
-    _stagesCache.value[chartId] = stages;
+    _stagesCache[chartId] = stages;
     // Persiste mappedStatus en stages que tengan nombre canónico pero el campo vacío
     for (const stage of stages) {
       if (stage.mappedStatus) continue;
@@ -260,7 +254,7 @@ const getChartStages = async (chartId, teamId) => {
       try {
         await updateStageRequest(stage.id, { mappedStatus: inferred });
         stage.mappedStatus = inferred;
-      } catch { /* sin permiso o error de red — se usará el fallback por nombre */ }
+      } catch {}
     }
     return stages;
   } catch {
@@ -328,7 +322,7 @@ const handleSendToBoard = async (task, chartId) => {
     if (!target) return;
     // PUT /tasks/:id acepta chartId + stageId y maneja taskIds, WIP y status automáticamente
     await tasksStore.updateTask(task.id, { chartId, stageId: target.id });
-  } catch { /* ignore */ } finally {
+  } catch {} finally {
     sendingToBoardId.value = null;
   }
 };
@@ -466,14 +460,14 @@ onMounted(async () => {
   try {
     await projectsStore.fetchProjects();
     if (projectOptions.value.length) createForm.projectId = projectOptions.value[0].value;
-  } catch { /* ignore */ }
+  } catch {}
 
-  try { await chartsStore.fetchCharts(); } catch { /* ignore */ }
+  try { await chartsStore.fetchCharts(); } catch {}
 
   try {
     const result = await fetchUserList();
     allUsers.value = result.data || [];
-  } catch { /* ignore */ }
+  } catch {}
 });
 </script>
 

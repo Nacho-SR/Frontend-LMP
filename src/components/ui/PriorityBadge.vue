@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 
 const props = defineProps({
-  // Numeric: 1=LOW, 2=MEDIUM, 3=HIGH, 4=URGENT
+  // 1=LOW, 2=MEDIUM, 3=HIGH, 4=URGENT
   priority: { type: Number, required: true },
 });
 

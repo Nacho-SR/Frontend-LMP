@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
-import { RouterLink, useRouter } from 'vue-router'; 
+import { useRouter } from 'vue-router';
 
 import AlertMessage from '../components/ui/AlertMessage.vue';
 import BaseButton from '../components/ui/BaseButton.vue';
@@ -143,26 +143,21 @@ const loadTaskData = async () => {
     stableTeamId.value = task.value.teamId || '';
     stableProjectId.value = task.value.projectId || '';
 
-    try { await teamsStore.fetchTeams(); } catch (e) {}
-    try { if (projectsStore.projects?.find) await projectsStore.fetchProjects(); } catch (e) {}
+    try { await teamsStore.fetchTeams(); } catch {}
+    try { await projectsStore.fetchProjects(); } catch {}
     
     if (stableTeamId.value) {
-      try { 
-        await teamsStore.fetchMembers(stableTeamId.value); 
-        
+      try {
+        await teamsStore.fetchMembers(stableTeamId.value);
         const uid = authStore.user?.id;
         if (uid) {
           const member = teamsStore.members.find((m) => m.userId === uid);
           localRole.value = member?.role ?? null;
         }
-      } catch (e) {
-        console.error("Error al obtener roles del equipo", e);
-      }
+      } catch {}
     }
 
-    try {
-      await tasksStore.fetchTaskComments(props.taskId);
-    } catch (e) {}
+    try { await tasksStore.fetchTaskComments(props.taskId); } catch {}
 
   } catch (error) {
     pageError.value = 'No se pudo cargar la información detallada de la tarea';
@@ -215,16 +210,9 @@ const handleAddComment = async () => {
   
   try {
     submittingComment.value = true;
-    pageError.value = ''; 
-    
-    await tasksStore.postTaskComment(task.value.id, {
-      content: commentContent.value.trim()
-    });
-    
+    await tasksStore.postTaskComment(task.value.id, { content: commentContent.value.trim() });
     commentContent.value = '';
-    
   } catch (error) {
-    console.error("Error al publicar el comentario en el componente:", error);
     const serverMessage = error.response?.data?.message || 'No tienes permisos o el formato es incorrecto.';
     pageError.value = `No se pudo publicar el comentario: ${serverMessage}`;
   } finally {

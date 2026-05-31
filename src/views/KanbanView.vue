@@ -34,30 +34,25 @@ const pageError = ref('');
 const stageError = ref('');
 const loading = ref(true);
 
-// Task drag & drop
 const draggedTaskId = ref(null);
 const draggedFromStageId = ref(null);
 const dragOverStageId = ref(null);
 const movingTaskId = ref(null);
 
-// Column drag & drop (reorder)
 const draggedStageId = ref(null);
 const dragOverColumnId = ref(null);
 
-// Stage creation
 const showCreateStage = ref(false);
 const newStageName = ref('');
 const creatingStage = ref(false);
 
-// Stage inline editing
 const editingStageId = ref(null);
 const editingStageName = ref('');
 const savingStageId = ref(null);
 const deletingStageId = ref(null);
 
-// Task detail / edit / delete
 const selectedTask = ref(null);
-const taskDetailMode = ref('view'); // 'view' | 'edit'
+const taskDetailMode = ref('view');
 const savingEdit = ref(false);
 const editError = ref('');
 const deleteConfirm = reactive({ open: false, loading: false });
@@ -143,8 +138,6 @@ const handleUpdateTask = async () => {
     };
     const taskId = selectedTask.value.id;
     const updated = await tasksStore.updateTask(taskId, payload);
-    // Backend devuelve objeto parcial (sin description/tags), así que
-    // fusionamos también los valores del formulario para reflejar el cambio completo
     const fullUpdated = {
       ...selectedTask.value,
       ...updated,
@@ -155,7 +148,6 @@ const handleUpdateTask = async () => {
       tags: payload.tags,
     };
     selectedTask.value = fullUpdated;
-    // Sincronizar también en el store con los campos completos
     const storeIdx = tasksStore.tasks.findIndex((t) => t.id === taskId);
     if (storeIdx !== -1) {
       tasksStore.tasks.splice(storeIdx, 1, { ...tasksStore.tasks[storeIdx], ...fullUpdated });
@@ -192,14 +184,12 @@ const handleDeleteTask = async () => {
   }
 };
 
-// Sync selectedTask after store updates (store replaces the array item by reference)
 const syncSelectedTask = () => {
   if (!selectedTask.value) return;
   const updated = tasksStore.tasks.find((t) => t.id === selectedTask.value.id);
   if (updated) selectedTask.value = { ...updated };
 };
 
-// Nombres canónicos de las etapas por defecto → mappedStatus
 const DEFAULT_STAGE_NAMES = {
   'to do': 'PENDING',
   'in progress': 'IN_PROGRESS',
@@ -207,8 +197,6 @@ const DEFAULT_STAGE_NAMES = {
   'done': 'COMPLETED',
 };
 
-// Encuentra la etapa del chart actual que tiene mappedStatus === status.
-// Si ninguna lo tiene, intenta por nombre de etapa como fallback.
 const stageForStatus = (status) => {
   const byMapped = stagesStore.stages.find((s) => s.mappedStatus === status);
   if (byMapped) return byMapped;
@@ -217,8 +205,6 @@ const stageForStatus = (status) => {
   return stagesStore.stages.find((s) => s.name.toLowerCase() === name) ?? null;
 };
 
-// Persiste mappedStatus en stages que tengan nombre canónico pero el campo vacío.
-// Se ejecuta en background tras cargar stages.
 const repairStageMappings = async () => {
   for (const stage of stagesStore.stages) {
     if (stage.mappedStatus) continue;
@@ -226,11 +212,10 @@ const repairStageMappings = async () => {
     if (!inferredStatus) continue;
     try {
       await stagesStore.updateStage(stage.id, { mappedStatus: inferredStatus });
-    } catch { /* usuario puede no tener permiso — ignorar */ }
+    } catch {}
   }
 };
 
-// Mueve el task a la etapa que corresponde al nuevo status (si existe y es diferente)
 const moveToPairedStage = async (fromTask, newStatus) => {
   const target = stageForStatus(newStatus);
   if (!target || !fromTask.stageId || fromTask.stageId === target.id) return;
@@ -245,7 +230,7 @@ const handleJoinTask = async () => {
   try {
     joiningTask.value = true;
     await tasksStore.joinTask(selectedTask.value.id, authStore.user?.id);
-  } catch { /* ignore */ } finally {
+  } catch {} finally {
     joiningTask.value = false;
     syncSelectedTask();
   }
@@ -299,7 +284,7 @@ const handleAdvanceTask = async () => {
   const nextStatus = task.status === 'PENDING' ? 'IN_PROGRESS' : 'REVIEW';
   advancingTask.value = true;
   stageError.value = '';
-  try { await tasksStore.advanceStatus(task.id); } catch { /* ignore */ }
+  try { await tasksStore.advanceStatus(task.id); } catch {}
   try {
     await moveToPairedStage(task, nextStatus);
   } catch (err) {
@@ -317,7 +302,7 @@ const handleCompleteTask = async () => {
   const task = { ...selectedTask.value };
   advancingTask.value = true;
   stageError.value = '';
-  try { await tasksStore.completeReview(task.id); } catch { /* ignore */ }
+  try { await tasksStore.completeReview(task.id); } catch {}
   try {
     await moveToPairedStage(task, 'COMPLETED');
   } catch (err) {
@@ -334,7 +319,7 @@ const handleClaimReviewTask = async () => {
   try {
     joiningTask.value = true;
     await tasksStore.claimTask(selectedTask.value.id, authStore.user?.id);
-  } catch { /* ignore */ } finally {
+  } catch {} finally {
     joiningTask.value = false;
     syncSelectedTask();
   }
@@ -345,7 +330,7 @@ const handleRejectTask = async () => {
   const task = { ...selectedTask.value };
   rejectingTask.value = true;
   stageError.value = '';
-  try { await tasksStore.rejectReview(task.id); } catch { /* ignore */ }
+  try { await tasksStore.rejectReview(task.id); } catch {}
   try {
     await moveToPairedStage(task, 'IN_PROGRESS');
   } catch (err) {
@@ -358,7 +343,6 @@ const handleRejectTask = async () => {
   rejectingTask.value = false;
 };
 
-// Task creation
 const showCreateTask = ref(false);
 const savingTask = ref(false);
 const createError = ref('');
@@ -445,7 +429,6 @@ const statusColor = {
   CANCELLED: 'text-red-600 bg-red-50',
 };
 
-// ── Drag & drop ────────────────────────────────────────────────────────────────
 const onDragStart = (event, taskId, stageId) => {
   draggedTaskId.value = taskId;
   draggedFromStageId.value = stageId;
@@ -463,7 +446,6 @@ const onDragLeave = (event) => {
   }
 };
 
-// ── Column reorder ─────────────────────────────────────────────────────────────
 const onColumnDragStart = (event, stageId) => {
   draggedStageId.value = stageId;
   event.dataTransfer.effectAllowed = 'move';
@@ -506,7 +488,6 @@ const onColumnDrop = async (toStageId) => {
   }
 };
 
-// Dispatchers: decide if it's a column drag or a task drag
 const handleDragOver = (stageId) => {
   if (draggedStageId.value) {
     dragOverColumnId.value = stageId;
@@ -555,7 +536,6 @@ const onDrop = async (toStageId) => {
   }
 };
 
-// ── Stage CRUD ─────────────────────────────────────────────────────────────────
 const handleCreateStage = async () => {
   if (!newStageName.value.trim()) return;
   try {
@@ -610,7 +590,6 @@ const handleDeleteStage = async (stageId) => {
   }
 };
 
-// ── Task creation ──────────────────────────────────────────────────────────────
 const handleCreateTask = async () => {
   if (!createForm.name.trim()) return;
   const firstStage = stagesStore.stages[0];
@@ -663,7 +642,6 @@ const handleCreateTask = async () => {
   }
 };
 
-// ── Init ───────────────────────────────────────────────────────────────────────
 onMounted(async () => {
   try {
     pageError.value = '';

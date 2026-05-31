@@ -12,7 +12,7 @@ const labelMap = {
   REVIEW:      'En revisión',
   COMPLETED:   'Completada',
   CANCELLED:   'Cancelada',
-  // Project / Team status
+  // Pro Team status
   ACTIVE:      'Activo',
   INACTIVE:    'Inactivo',
   ARCHIVED:    'Archivado',
