@@ -76,7 +76,7 @@ onMounted(async () => {
   <section class="space-y-6">
     <div>
       <h1 class="text-2xl font-semibold tracking-tight text-slate-950">
-        Bienvenido, {{ authStore.user?.displayName || authStore.user?.userName || 'usuario' }}
+        Welcome, {{ authStore.user?.displayName || authStore.user?.userName || 'usuario' }}
       </h1>
       <p class="mt-1 text-sm font-medium text-slate-500">Dashboard</p>
     </div>
@@ -88,7 +88,7 @@ onMounted(async () => {
 
       <!-- Accesos rapidos -->
       <div>
-        <h2 class="mb-3 text-sm font-semibold text-slate-950">Accesos rapidos</h2>
+        <h2 class="mb-3 text-sm font-semibold text-slate-950">Quick access</h2>
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <RouterLink
             :to="{ name: 'teams' }"
@@ -106,7 +106,7 @@ onMounted(async () => {
             <svg class="h-6 w-6 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
               <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
             </svg>
-            <span class="text-xs font-medium text-slate-700">Proyectos</span>
+            <span class="text-xs font-medium text-slate-700">Projects</span>
           </RouterLink>
           <RouterLink
             :to="{ name: 'tasks' }"
@@ -115,7 +115,7 @@ onMounted(async () => {
             <svg class="h-6 w-6 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
             </svg>
-            <span class="text-xs font-medium text-slate-700">Tareas</span>
+            <span class="text-xs font-medium text-slate-700">Tasks</span>
           </RouterLink>
           <RouterLink
             :to="{ name: 'notifications' }"
@@ -124,7 +124,7 @@ onMounted(async () => {
             <svg class="h-6 w-6 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
               <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
             </svg>
-            <span class="text-xs font-medium text-slate-700">Notificaciones</span>
+            <span class="text-xs font-medium text-slate-700">Notifications</span>
           </RouterLink>
         </div>
       </div>
@@ -132,23 +132,23 @@ onMounted(async () => {
       <!-- Tarjetas de resumen -->
       <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Equipos</p>
+          <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Teams</p>
           <p class="mt-1 text-3xl font-bold text-slate-950">{{ summary.teams.total }}</p>
         </div>
         <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Proyectos activos</p>
+          <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Active projects</p>
           <p class="mt-1 text-3xl font-bold text-slate-950">{{ summary.projects.byStatus?.ACTIVE ?? 0 }}</p>
         </div>
         <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Tareas totales</p>
+          <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Total tasks</p>
           <p class="mt-1 text-3xl font-bold text-slate-950">{{ tasks.total }}</p>
         </div>
         <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Asignadas a mi</p>
+          <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Assigned tasks</p>
           <p class="mt-1 text-3xl font-bold text-indigo-600">{{ tasks.assignedToMe }}</p>
         </div>
         <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Vencidas</p>
+          <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Expired</p>
           <p
             class="mt-1 text-3xl font-bold"
             :class="tasks.overdue > 0 ? 'text-red-600' : 'text-slate-950'"
@@ -161,7 +161,7 @@ onMounted(async () => {
       <!-- Tareas por estado y por prioridad -->
       <div class="grid gap-4 sm:grid-cols-2">
         <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 class="mb-3 text-sm font-semibold text-slate-950">Tareas por estado</h2>
+          <h2 class="mb-3 text-sm font-semibold text-slate-950">Tasks by status</h2>
           <div class="space-y-2">
             <div
               v-for="[status, count] in taskStatusEntries"
@@ -181,7 +181,7 @@ onMounted(async () => {
         </div>
 
         <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 class="mb-3 text-sm font-semibold text-slate-950">Tareas por prioridad</h2>
+          <h2 class="mb-3 text-sm font-semibold text-slate-950">Tasks by priority</h2>
           <div class="space-y-2">
             <div
               v-for="[priority, count] in taskPriorityEntries"
@@ -204,10 +204,10 @@ onMounted(async () => {
       <!-- Resumen por proyecto -->
       <div class="rounded-lg border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-slate-100 px-5 py-4">
-          <h2 class="text-sm font-semibold text-slate-950">Resumen por proyecto</h2>
+          <h2 class="text-sm font-semibold text-slate-950">Project summaries</h2>
         </div>
         <p v-if="!projectSummaries.length" class="px-5 py-6 text-sm italic text-slate-400">
-          Sin proyectos.
+          No projects.
         </p>
         <div v-else class="divide-y divide-slate-100">
           <div
