@@ -992,8 +992,8 @@ onMounted(async () => {
                   <BaseSelect
                     id="task-member-assignee"
                     v-model="assignUserId"
-                    label="Asignar miembro"
-                    placeholder="Selecciona un miembro"
+                    label="Assign member"
+                    placeholder="Select a member"
                     :options="assignableMemberOptions"
                     :disabled="assigningTask || isTaskFull || !assignableMemberOptions.length"
                   />

@@ -22,12 +22,12 @@ const handleChangePassword = async () => {
   passwordSuccess.value = false;
 
   if (passwordForm.password !== passwordForm.confirmPassword) {
-    passwordError.value = 'Las contraseñas nuevas no coinciden';
+    passwordError.value = 'New password does not match';
     return;
   }
 
   if (passwordForm.password.length < 6) {
-    passwordError.value = 'La contraseña debe tener al menos 6 caracteres';
+    passwordError.value = 'Password must have at least 6 characters';
     return;
   }
 
@@ -43,7 +43,7 @@ const handleChangePassword = async () => {
     passwordForm.confirmPassword = '';
   } catch (error) {
     passwordError.value =
-      error.response?.data?.message || 'No se pudo cambiar la contraseña';
+      error.response?.data?.message || 'Unable to update password';
   } finally {
     passwordLoading.value = false;
   }
@@ -58,14 +58,14 @@ const handleLogout = async () => {
 <template>
   <section class="space-y-6">
     <div>
-      <p class="text-sm font-medium text-slate-500">Cuenta</p>
+      <p class="text-sm font-medium text-slate-500">Account</p>
       <h1 class="mt-1 text-2xl font-semibold tracking-tight text-slate-950">Mi perfil</h1>
     </div>
 
     <!-- Datos del usuario -->
     <div class="rounded-lg border border-slate-200 bg-white shadow-sm">
       <div class="border-b border-slate-200 px-6 py-4">
-        <h2 class="text-base font-semibold text-slate-950">Información personal</h2>
+        <h2 class="text-base font-semibold text-slate-950">Personal information</h2>
       </div>
 
       <div class="px-6 py-5">
@@ -87,7 +87,7 @@ const handleLogout = async () => {
             <dd class="mt-1 text-sm text-slate-950">{{ authStore.user?.email || '—' }}</dd>
           </div>
           <div>
-            <dt class="text-xs font-medium uppercase tracking-wide text-slate-400">Rol global</dt>
+            <dt class="text-xs font-medium uppercase tracking-wide text-slate-400">Global role</dt>
             <dd class="mt-1">
               <span class="status-pill">{{ authStore.user?.role || 'user' }}</span>
             </dd>
@@ -105,13 +105,13 @@ const handleLogout = async () => {
     <!-- Cambio de contraseña -->
     <div class="rounded-lg border border-slate-200 bg-white shadow-sm">
       <div class="border-b border-slate-200 px-6 py-4">
-        <h2 class="text-base font-semibold text-slate-950">Cambiar contraseña</h2>
+        <h2 class="text-base font-semibold text-slate-950">Change password</h2>
       </div>
 
       <form class="px-6 py-5" @submit.prevent="handleChangePassword">
         <div class="max-w-sm space-y-4">
           <div class="form-field mb-0">
-            <label for="oldPassword">Contraseña actual</label>
+            <label for="oldPassword">Current password</label>
             <input
               id="oldPassword"
               v-model="passwordForm.oldPassword"
@@ -123,7 +123,7 @@ const handleLogout = async () => {
           </div>
 
           <div class="form-field mb-0">
-            <label for="newPassword">Nueva contraseña</label>
+            <label for="newPassword">New password</label>
             <input
               id="newPassword"
               v-model="passwordForm.password"
@@ -136,7 +136,7 @@ const handleLogout = async () => {
           </div>
 
           <div class="form-field mb-0">
-            <label for="confirmPassword">Confirmar nueva contraseña</label>
+            <label for="confirmPassword">Confirm new password</label>
             <input
               id="confirmPassword"
               v-model="passwordForm.confirmPassword"
@@ -159,7 +159,7 @@ const handleLogout = async () => {
             v-if="passwordSuccess"
             class="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700"
           >
-            Contraseña actualizada correctamente
+            Password updated!
           </p>
 
           <button
@@ -167,7 +167,7 @@ const handleLogout = async () => {
             :disabled="passwordLoading"
             class="primary-button"
           >
-            {{ passwordLoading ? 'Guardando...' : 'Cambiar contraseña' }}
+            {{ passwordLoading ? 'Saving...' : 'Change password' }}
           </button>
         </div>
       </form>
@@ -176,14 +176,14 @@ const handleLogout = async () => {
     <!-- Zona peligrosa / Logout -->
     <div class="rounded-lg border border-slate-200 bg-white shadow-sm">
       <div class="border-b border-slate-200 px-6 py-4">
-        <h2 class="text-base font-semibold text-slate-950">Sesión</h2>
+        <h2 class="text-base font-semibold text-slate-950">Session</h2>
       </div>
       <div class="px-6 py-5">
         <p class="mb-4 text-sm text-slate-600">
-          Cierra sesión en este dispositivo. Tendrás que volver a iniciar sesión para acceder.
+          Log out in this device. You will need to login again afterwards.
         </p>
         <button type="button" class="danger-button" @click="handleLogout">
-          Cerrar sesión
+          Log out
         </button>
       </div>
     </div>

@@ -34,7 +34,7 @@ const filteredNotifications = computed(() => {
 
 const formatDate = (dateStr) => {
   if (!dateStr) return null;
-  return new Date(dateStr).toLocaleDateString('es-MX', {
+  return new Date(dateStr).toLocaleDateString({
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -128,7 +128,7 @@ onMounted(() => notificationsStore.fetchNotifications());
     <AlertMessage v-if="statusMessage" type="success" :message="statusMessage" />
     <div class="grid gap-6">
       <div>
-        <LoadingState v-if="notificationsStore.loading" message="Cargando notificationes..." />
+        <LoadingState v-if="notificationsStore.loading" message="Loading notifications..." />
 
         <div
           v-else-if="!filteredNotifications.length"
@@ -164,7 +164,7 @@ onMounted(() => notificationsStore.fetchNotifications());
                   :class="notification.read ? 'text-slate-400' : 'text-slate-600'"
                   class="mt-2 flex-1 text-sm"
                 >
-                  {{ notification.body || 'Sin descripción' }}
+                  {{ notification.body || 'No description' }}
                 </p>
               </div>
               
