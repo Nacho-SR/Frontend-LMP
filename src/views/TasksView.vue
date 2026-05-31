@@ -210,6 +210,8 @@ const canEdit = (task) =>
 
 const canDelete = () =>
   myRole.value === 'OWNER' || myRole.value === 'MANAGER';
+const isClientRole = (role) => String(role || '').toUpperCase() === 'CLIENT';
+const canWorkTasks = computed(() => !isClientRole(myRole.value || authStore.user?.role));
 
 const ERRORS = {
   UNAUTHORIZED_TEAM_ACCESS: 'You have no access to this team',
@@ -326,6 +328,7 @@ const handleSendToBoard = async (task, chartId) => {
 };
 
 const handleCreate = async () => {
+  if (!canWorkTasks.value) return;
   try {
     creating.value = true;
     createError.value = '';
@@ -369,6 +372,7 @@ const handleCreate = async () => {
 };
 
 const handleAdvance = async (task) => {
+  if (!canWorkTasks.value) return;
   const snapshot = { ...task };
   const nextStatus = task.status === 'PENDING' ? 'IN_PROGRESS' : 'REVIEW';
   try {
@@ -383,6 +387,7 @@ const handleAdvance = async (task) => {
 };
 
 const handleComplete = async (task) => {
+  if (!canWorkTasks.value) return;
   const snapshot = { ...task };
   try {
     advancingId.value = task.id;
@@ -418,6 +423,7 @@ const handleClaimReview = async (task) => {
 };
 
 const handleReject = async (task) => {
+  if (!canWorkTasks.value) return;
   const snapshot = { ...task };
   try {
     rejectingId.value = task.id;
@@ -661,7 +667,7 @@ onMounted(async () => {
 
                 <!-- Avanzar estado: Iniciar / Revisar (solo el asignado, no en REVIEW) -->
                 <BaseButton
-                  v-if="isMyTask(task) && ['PENDING', 'IN_PROGRESS'].includes(task.status)"
+                  v-if="canWorkTasks && isMyTask(task) && ['PENDING', 'IN_PROGRESS'].includes(task.status)"
                   variant="secondary"
                   size="sm"
                   :loading="advancingId === task.id"
@@ -682,7 +688,7 @@ onMounted(async () => {
                 </BaseButton>
 
                 <!-- Acciones del revisor asignado -->
-                <template v-if="isMyTask(task) && task.status === 'REVIEW'">
+                <template v-if="canWorkTasks && isMyTask(task) && task.status === 'REVIEW'">
                   <BaseButton
                     variant="secondary"
                     size="sm"
@@ -761,7 +767,7 @@ onMounted(async () => {
       </div>
 
       <!-- Crear tarea -->
-      <aside>
+      <aside v-if="canWorkTasks">
         <form
           class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
           @submit.prevent="handleCreate"

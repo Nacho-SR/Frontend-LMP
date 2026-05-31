@@ -83,6 +83,8 @@ const projectName = computed(() =>
 const isMyTask = computed(() => assignedUserIds.value.includes(authStore.user?.id));
 const canDelete = computed(() => ['OWNER', 'MANAGER'].includes(localRole.value));
 const canAssignTask = computed(() => ['OWNER', 'MANAGER'].includes(localRole.value));
+const isClientRole = (role) => String(role || '').toUpperCase() === 'CLIENT';
+const canWorkTasks = computed(() => !isClientRole(localRole.value || authStore.user?.role));
 
 const userName = (userId) => {
   const member = teamsStore.members.find((m) => m.userId === userId);
@@ -167,6 +169,7 @@ const loadTaskData = async () => {
 };
 
 const handleAdvance = async () => {
+  if (!canWorkTasks.value) return;
   try {
     actionLoading.value = true;
     await tasksStore.advanceStatus(task.value.id);
@@ -174,6 +177,7 @@ const handleAdvance = async () => {
 };
 
 const handleReject = async () => {
+  if (!canWorkTasks.value) return;
   try {
     actionLoading.value = true;
     await tasksStore.rejectReview(task.value.id);
@@ -181,6 +185,7 @@ const handleReject = async () => {
 };
 
 const handleComplete = async () => {
+  if (!canWorkTasks.value) return;
   try {
     actionLoading.value = true;
     await tasksStore.completeReview(task.value.id);
@@ -447,11 +452,11 @@ onMounted(async () => {
             </div>
           </div>
 
-          <div class="border-t border-slate-100 pt-4 space-y-2" v-if="task">
+          <div class="border-t border-slate-100 pt-4 space-y-2" v-if="task && canWorkTasks">
             <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Action Flow</h3>
             
             <BaseButton
-              v-if="isMyTask && ['PENDING', 'IN_PROGRESS'].includes(task.status)"
+              v-if="canWorkTasks && isMyTask && ['PENDING', 'IN_PROGRESS'].includes(task.status)"
               variant="primary"
               class="w-full justify-center"
               :loading="actionLoading"
@@ -460,7 +465,7 @@ onMounted(async () => {
               {{ task.status === 'PENDING' ? 'Start task' : 'Send to review' }}
             </BaseButton>
 
-            <template v-if="isMyTask && task.status === 'REVIEW'">
+            <template v-if="canWorkTasks && isMyTask && task.status === 'REVIEW'">
               <BaseButton
                 variant="secondary"
                 class="w-full justify-center"

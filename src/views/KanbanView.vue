@@ -362,7 +362,7 @@ const handleDeleteComment = async (commentId) => {
 };
 
 const handleAdvanceTask = async () => {
-  if (!selectedTask.value) return;
+  if (!selectedTask.value || !canWorkTasks.value) return;
   const task = { ...selectedTask.value };
   const nextStatus = task.status === 'PENDING' ? 'IN_PROGRESS' : 'REVIEW';
   advancingTask.value = true;
@@ -381,7 +381,7 @@ const handleAdvanceTask = async () => {
 };
 
 const handleCompleteTask = async () => {
-  if (!selectedTask.value) return;
+  if (!selectedTask.value || !canWorkTasks.value) return;
   const task = { ...selectedTask.value };
   advancingTask.value = true;
   stageError.value = '';
@@ -399,6 +399,7 @@ const handleCompleteTask = async () => {
 };
 
 const handleClaimReviewTask = async () => {
+  if (!canWorkTasks.value) return;
   try {
     joiningTask.value = true;
     await tasksStore.claimTask(selectedTask.value.id, authStore.user?.id);
@@ -409,7 +410,7 @@ const handleClaimReviewTask = async () => {
 };
 
 const handleRejectTask = async () => {
-  if (!selectedTask.value) return;
+  if (!selectedTask.value || !canWorkTasks.value) return;
   const task = { ...selectedTask.value };
   rejectingTask.value = true;
   stageError.value = '';
@@ -453,6 +454,8 @@ const myRole = computed(() => {
 });
 
 const canManageStages = computed(() => ['OWNER', 'MANAGER'].includes(myRole.value));
+const isClientRole = (role) => String(role || '').toUpperCase() === 'CLIENT';
+const canWorkTasks = computed(() => !isClientRole(myRole.value || authStore.user?.role));
 
 const tasksByStage = computed(() => {
   const map = {};
@@ -588,6 +591,7 @@ const handleDrop = (stageId) => {
 };
 
 const onDrop = async (toStageId) => {
+  if (!canWorkTasks.value) return;
   dragOverStageId.value = null;
   if (!draggedTaskId.value || draggedFromStageId.value === toStageId) {
     draggedTaskId.value = null;
@@ -674,7 +678,7 @@ const handleDeleteStage = async (stageId) => {
 };
 
 const handleCreateTask = async () => {
-  if (!createForm.name.trim()) return;
+  if (!canWorkTasks.value || !createForm.name.trim()) return;
   const firstStage = stagesStore.stages[0];
   if (!firstStage) return;
   try {
@@ -770,7 +774,7 @@ onMounted(async () => {
       <div class="mt-2 flex items-center justify-between gap-4">
         <PageHeader :title="chart?.name || 'Tablero'" subtitle="Kanban" />
         <button
-          v-if="stagesStore.stages.length"
+          v-if="stagesStore.stages.length && canWorkTasks"
           type="button"
           class="shrink-0 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
           @click="showCreateTask = true; createError = ''; createSuccess = ''"
@@ -810,7 +814,7 @@ onMounted(async () => {
               <!-- Handle de arrastre (reordenar columnas) -->
               <div
                 v-if="canManageStages"
-                draggable="true"
+                :draggable="canWorkTasks"
                 class="mr-1 shrink-0 cursor-grab text-slate-300 hover:text-slate-500 active:cursor-grabbing"
                 title="Arrastrar para reordenar"
                 @dragstart.stop="onColumnDragStart($event, stage.id)"
@@ -889,7 +893,7 @@ onMounted(async () => {
                 draggable="true"
                 class="cursor-pointer rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md active:cursor-grabbing"
                 :class="movingTaskId === task.id ? 'opacity-40' : ''"
-                @dragstart="onDragStart($event, task.id, stage.id)"
+                @dragstart="canWorkTasks && onDragStart($event, task.id, stage.id)"
                 @click="openTask(task)"
               >
                 <!-- Prioridad + nombre -->
@@ -1258,7 +1262,7 @@ onMounted(async () => {
             <template v-if="taskDetailMode === 'view'">
               <!-- Asignarme: tarea pendiente/en-progreso sin cupo lleno y no soy asignado -->
               <BaseButton
-                v-if="!isMyTask && ['PENDING', 'IN_PROGRESS'].includes(selectedTask.status) && !isTaskFull"
+                v-if="canWorkTasks && !isMyTask && ['PENDING', 'IN_PROGRESS'].includes(selectedTask.status) && !isTaskFull"
                 variant="secondary"
                 size="sm"
                 :loading="joiningTask"
@@ -1269,7 +1273,7 @@ onMounted(async () => {
 
               <!-- Avanzar estado: solo si soy asignado en PENDING o IN_PROGRESS -->
               <BaseButton
-                v-if="isMyTask && ['PENDING', 'IN_PROGRESS'].includes(selectedTask.status)"
+                v-if="canWorkTasks && isMyTask && ['PENDING', 'IN_PROGRESS'].includes(selectedTask.status)"
                 variant="secondary"
                 size="sm"
                 :loading="advancingTask"
@@ -1280,7 +1284,7 @@ onMounted(async () => {
 
               <!-- Tomar revisión: tarea en REVIEW, no soy el asignado actual y no trabajé en ella -->
               <BaseButton
-                v-if="selectedTask.status === 'REVIEW' && !isMyTask && !isWorkerOf"
+                v-if="canWorkTasks && selectedTask.status === 'REVIEW' && !isMyTask && !isWorkerOf"
                 variant="secondary"
                 size="sm"
                 :loading="joiningTask"
@@ -1290,7 +1294,7 @@ onMounted(async () => {
               </BaseButton>
 
               <!-- Acciones del revisor asignado -->
-              <template v-if="isMyTask && selectedTask.status === 'REVIEW'">
+              <template v-if="canWorkTasks && isMyTask && selectedTask.status === 'REVIEW'">
                 <BaseButton
                   variant="secondary"
                   size="sm"
@@ -1340,7 +1344,7 @@ onMounted(async () => {
   <Teleport to="body">
     <Transition name="dialog">
       <div
-        v-if="showCreateTask"
+        v-if="showCreateTask && canWorkTasks"
         class="fixed inset-0 z-50 flex items-center justify-center p-4"
         @click.self="showCreateTask = false"
       >
