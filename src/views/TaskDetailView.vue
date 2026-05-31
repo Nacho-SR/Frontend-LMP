@@ -267,7 +267,7 @@ onMounted(async () => {
 
     <AlertMessage v-if="pageError" type="error" :message="pageError" />
     
-    <LoadingState v-if="pageLoading" message="Cargando detalles de tarea..." />
+    <LoadingState v-if="pageLoading" message="Loading task details..." />
 
     <div v-else class="grid gap-6 xl:grid-cols-[1fr_360px]">
       
