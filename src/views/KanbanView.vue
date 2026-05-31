@@ -65,6 +65,12 @@ const assigningTask = ref(false);
 const removingAssigneeId = ref('');
 const assignError = ref('');
 const assignSuccess = ref('');
+const commentsTaskId = ref('');
+const commentContent = ref('');
+const commentsLoading = ref(false);
+const submittingComment = ref(false);
+const deletingCommentId = ref('');
+const commentError = ref('');
 
 const editForm = reactive({
   name: '',
@@ -76,9 +82,29 @@ const editForm = reactive({
 
 const PRIORITY_LABEL = { 1: 'Low', 2: 'Medium', 3: 'High', 4: 'Urgent' };
 
+const toDate = (value) => {
+  if (!value) return null;
+  if (value._seconds) return new Date(value._seconds * 1000);
+  return new Date(value);
+};
+
 const formatDate = (str) => {
   if (!str) return null;
-  return new Date(str).toLocaleDateString({ day: '2-digit', month: 'short', year: 'numeric' });
+  const date = toDate(str);
+  if (!date || Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
+const formatDateTime = (value) => {
+  const date = toDate(value);
+  if (!date || Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString('es-MX', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 };
 
 const getMaxWorkers = (task) => {
@@ -98,6 +124,32 @@ const isTaskFull = computed(() => {
   return (selectedTask.value?.assignedUserIds || []).length >= max;
 });
 
+const selectedTaskComments = computed(() => {
+  if (!selectedTask.value || commentsTaskId.value !== selectedTask.value.id) return [];
+  return tasksStore.comments || [];
+});
+
+const resetCommentState = () => {
+  commentContent.value = '';
+  commentError.value = '';
+  deletingCommentId.value = '';
+};
+
+const loadTaskComments = async (taskId) => {
+  if (!taskId) return;
+  commentsTaskId.value = taskId;
+  commentsLoading.value = true;
+  commentError.value = '';
+
+  try {
+    await tasksStore.fetchTaskComments(taskId);
+  } catch (error) {
+    commentError.value = error.response?.data?.message || 'No se pudieron cargar los comentarios';
+  } finally {
+    if (commentsTaskId.value === taskId) commentsLoading.value = false;
+  }
+};
+
 const openTask = (task) => {
   selectedTask.value = task;
   taskDetailMode.value = 'view';
@@ -105,6 +157,8 @@ const openTask = (task) => {
   assignUserId.value = '';
   assignError.value = '';
   assignSuccess.value = '';
+  resetCommentState();
+  loadTaskComments(task.id);
 };
 
 const openEditMode = () => {
@@ -275,6 +329,35 @@ const handleRemoveAssignedUser = async (userId) => {
     assignError.value = error.response?.data?.message || 'Unable to remove the member';
   } finally {
     removingAssigneeId.value = '';
+  }
+};
+
+const handleAddComment = async () => {
+  if (!selectedTask.value || !commentContent.value.trim()) return;
+
+  try {
+    submittingComment.value = true;
+    commentError.value = '';
+    await tasksStore.postTaskComment(selectedTask.value.id, { content: commentContent.value.trim() });
+    commentContent.value = '';
+  } catch (error) {
+    commentError.value = error.response?.data?.message || 'No se pudo publicar el comentario';
+  } finally {
+    submittingComment.value = false;
+  }
+};
+
+const handleDeleteComment = async (commentId) => {
+  if (!selectedTask.value || !commentId) return;
+
+  try {
+    deletingCommentId.value = commentId;
+    commentError.value = '';
+    await tasksStore.deleteTaskComment(selectedTask.value.id, commentId);
+  } catch (error) {
+    commentError.value = error.response?.data?.message || 'No se pudo eliminar el comentario';
+  } finally {
+    deletingCommentId.value = '';
   }
 };
 
@@ -1017,9 +1100,70 @@ onMounted(async () => {
               <AlertMessage v-if="assignError" type="error" :message="assignError" class="mt-3" />
               <AlertMessage v-if="assignSuccess" type="success" :message="assignSuccess" class="mt-3" />
             </div>
+            <div class="border-t border-slate-100 pt-4">
+              <div class="mb-3 flex items-center justify-between gap-3">
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Comentarios</p>
+                <span class="text-xs text-slate-500">{{ selectedTaskComments.length }}</span>
+              </div>
+
+              <div class="flex gap-3">
+                <div class="min-w-0 flex-1">
+                  <BaseTextarea
+                    id="task-modal-comment"
+                    v-model="commentContent"
+                    placeholder="Escribe un comentario"
+                    :rows="2"
+                    :disabled="submittingComment"
+                  />
+                </div>
+                <BaseButton
+                  size="sm"
+                  class="mt-6"
+                  :loading="submittingComment"
+                  :disabled="!commentContent.trim()"
+                  @click="handleAddComment"
+                >
+                  Comentar
+                </BaseButton>
+              </div>
+
+              <AlertMessage v-if="commentError" type="error" :message="commentError" class="mt-3" />
+
+              <div v-if="commentsLoading" class="mt-3 rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-500">
+                Cargando comentarios...
+              </div>
+              <div v-else-if="!selectedTaskComments.length" class="mt-3 rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-500">
+                Aun no hay comentarios.
+              </div>
+              <div v-else class="mt-3 max-h-64 divide-y divide-slate-100 overflow-y-auto rounded-lg border border-slate-100">
+                <div
+                  v-for="comment in selectedTaskComments"
+                  :key="comment.id"
+                  class="bg-white px-3 py-2 text-sm"
+                >
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                      <p class="truncate font-medium text-slate-800">
+                        {{ userName(comment.posterId) || comment.posterId }}
+                      </p>
+                      <p class="text-xs text-slate-400">{{ formatDateTime(comment.createdAt) }}</p>
+                    </div>
+                    <button
+                      v-if="comment.posterId === authStore.user?.id"
+                      type="button"
+                      class="shrink-0 rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:pointer-events-none disabled:opacity-50"
+                      :disabled="deletingCommentId === comment.id"
+                      @click="handleDeleteComment(comment.id)"
+                    >
+                      {{ deletingCommentId === comment.id ? 'Eliminando...' : 'Eliminar' }}
+                    </button>
+                  </div>
+                  <p class="mt-2 whitespace-pre-wrap text-slate-600">{{ comment.content }}</p>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <!-- Cuerpo: modo edición (solo OWNER/MANAGER) -->
           <div v-else class="flex-1 overflow-y-auto px-6 py-4">
             <div class="grid gap-3 sm:grid-cols-2">
               <div class="sm:col-span-2">
