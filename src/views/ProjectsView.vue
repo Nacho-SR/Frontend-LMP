@@ -32,8 +32,8 @@ const teamName = (teamId) =>
   teamsStore.teams.find((t) => t.id === teamId)?.name ?? '—';
 
 const ERRORS = {
-  INSUFFICIENT_TEAM_ROLE: 'No tienes permiso para crear proyectos en este equipo',
-  UNAUTHORIZED_TEAM_ACCESS: 'No perteneces a este equipo',
+  INSUFFICIENT_TEAM_ROLE: 'You do not have permissions to create projects for this team',
+  UNAUTHORIZED_TEAM_ACCESS: 'You are not a member of this team',
 };
 
 const mapError = (error, fallback) => {
@@ -47,11 +47,11 @@ const handleCreate = async () => {
     createError.value = '';
     createSuccess.value = '';
     await projectsStore.createProject({ ...createForm });
-    createSuccess.value = 'Proyecto creado correctamente';
+    createSuccess.value = 'Project created correctly';
     createForm.name = '';
     createForm.description = '';
   } catch (error) {
-    createError.value = mapError(error, 'No se pudo crear el proyecto');
+    createError.value = mapError(error, 'Unable to create a project');
   } finally {
     creating.value = false;
   }
@@ -63,28 +63,28 @@ onMounted(async () => {
   try {
     await projectsStore.fetchProjects();
   } catch {
-    listError.value = 'No se pudieron cargar los proyectos';
+    listError.value = 'Unable to load projects';
   }
 });
 </script>
 
 <template>
   <section class="space-y-6">
-    <PageHeader title="Proyectos" subtitle="Gestión" />
+    <PageHeader title="Projects" subtitle="Management" />
 
     <div class="grid gap-6 xl:grid-cols-[1fr_360px]">
       <!-- Lista de proyectos -->
       <div>
         <AlertMessage v-if="listError" type="error" :message="listError" class="mb-4" />
-        <LoadingState v-if="projectsStore.loading" message="Cargando proyectos..." />
+        <LoadingState v-if="projectsStore.loading" message="Load projects..." />
 
         <div
           v-else-if="!projectsStore.projects.length && !listError"
           class="rounded-lg border border-slate-200 bg-white shadow-sm"
         >
           <EmptyState
-            title="Sin proyectos"
-            description="Crea tu primer proyecto asignándolo a uno de tus equipos."
+            title="No projects"
+            description="Create your first project."
           >
             <template #icon>
               <svg class="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -106,11 +106,11 @@ onMounted(async () => {
             </div>
 
             <p class="mt-1 line-clamp-2 flex-1 text-sm text-slate-500">
-              {{ project.description || 'Sin descripción' }}
+              {{ project.description || 'No description' }}
             </p>
 
             <p class="mt-2 text-xs text-slate-400">
-              Equipo: <span class="font-medium text-slate-600">{{ teamName(project.teamId) }}</span>
+              Team: <span class="font-medium text-slate-600">{{ teamName(project.teamId) }}</span>
             </p>
 
             <div class="mt-4 flex items-center justify-end border-t border-slate-100 pt-4">
@@ -118,7 +118,7 @@ onMounted(async () => {
                 :to="{ name: 'project-detail', params: { projectId: project.id } }"
                 class="secondary-button"
               >
-                Ver proyecto
+                View Project
               </RouterLink>
             </div>
           </article>
@@ -131,22 +131,22 @@ onMounted(async () => {
           class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
           @submit.prevent="handleCreate"
         >
-          <h2 class="text-base font-semibold text-slate-950">Crear proyecto</h2>
+          <h2 class="text-base font-semibold text-slate-950">Create project</h2>
 
           <div class="mt-4 space-y-1">
-            <BaseInput id="proj-name" v-model="createForm.name" label="Nombre" required />
-            <BaseTextarea id="proj-desc" v-model="createForm.description" label="Descripción" :rows="2" />
+            <BaseInput id="proj-name" v-model="createForm.name" label="Name" required />
+            <BaseTextarea id="proj-desc" v-model="createForm.description" label="Description" :rows="2" />
             <BaseSelect
               id="proj-team"
               v-model="createForm.teamId"
-              label="Equipo"
+              label="Team"
               :options="teamOptions"
               :disabled="!teamOptions.length"
             />
           </div>
 
           <p v-if="!teamOptions.length" class="mt-2 text-xs text-slate-400">
-            Debes pertenecer a un equipo para crear proyectos.
+            You must belong to a team to create a project.
           </p>
 
           <AlertMessage v-if="createError" type="error" :message="createError" class="mt-3" />
@@ -158,7 +158,7 @@ onMounted(async () => {
             :disabled="!teamOptions.length"
             class="mt-4 w-full"
           >
-            Crear proyecto
+            Create project
           </BaseButton>
         </form>
       </aside>
