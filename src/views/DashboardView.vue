@@ -14,7 +14,7 @@ const loading = ref(true);
 const pageError = ref('');
 const summary = ref(null);
 
-const PRIORITY_LABEL = { 1: 'Baja', 2: 'Media', 3: 'Alta', 4: 'Urgente' };
+const PRIORITY_LABEL = { 1: 'Low', 2: 'Medium', 3: 'High', 4: 'Urgent' };
 const PRIORITY_COLOR = {
   1: 'bg-green-50 text-green-700',
   2: 'bg-yellow-50 text-yellow-700',
@@ -23,10 +23,10 @@ const PRIORITY_COLOR = {
 };
 const STATUS_LABEL = {
   PENDING: 'Pendiente',
-  IN_PROGRESS: 'En progreso',
-  REVIEW: 'Revision',
-  COMPLETED: 'Completado',
-  CANCELLED: 'Cancelado',
+  IN_PROGRESS: 'In progress',
+  REVIEW: 'Review',
+  COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled',
 };
 const STATUS_COLOR = {
   PENDING: 'bg-slate-100 text-slate-600',
@@ -97,7 +97,7 @@ onMounted(async () => {
             <svg class="h-6 w-6 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
               <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            <span class="text-xs font-medium text-slate-700">Equipos</span>
+            <span class="text-xs font-medium text-slate-700">Teams</span>
           </RouterLink>
           <RouterLink
             :to="{ name: 'projects' }"
@@ -226,9 +226,9 @@ onMounted(async () => {
             </div>
             <div class="flex shrink-0 flex-wrap gap-4 text-xs text-slate-500">
               <span>Total: <strong class="text-slate-800">{{ proj.taskSummary.total }}</strong></span>
-              <span>Completadas: <strong class="text-green-700">{{ proj.taskSummary.completed }}</strong></span>
+              <span>Completed: <strong class="text-green-700">{{ proj.taskSummary.completed }}</strong></span>
               <span v-if="proj.taskSummary.overdue > 0">
-                Vencidas: <strong class="text-red-600">{{ proj.taskSummary.overdue }}</strong>
+                Expired: <strong class="text-red-600">{{ proj.taskSummary.overdue }}</strong>
               </span>
             </div>
           </div>

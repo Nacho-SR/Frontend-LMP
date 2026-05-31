@@ -52,15 +52,15 @@ const handleLogin = async () => {
       rateLimitHits += 1;
       if (rateLimitHits >= 2) {
         startCountdown(seconds);
-        errorMessage.value = `Demasiados intentos. Espera ${seconds} segundos antes de volver a intentarlo.`;
+        errorMessage.value = `Too many attempts. Wait ${seconds} seconds before trying again.`;
       } else {
-        errorMessage.value = 'Demasiados intentos. Espera un momento antes de volver a intentarlo.';
+        errorMessage.value = 'Too many attempts. Wait a moment before trying again.';
       }
     } else {
       const errorMap = {
-        INVALID_CREDENTIALS: 'Email o contraseña incorrectos',
-        ACCOUNT_LOCKED: 'Cuenta bloqueada por demasiados intentos fallidos. Contacta al administrador.',
-        USER_NOT_FOUND: 'No existe una cuenta con ese email',
+        INVALID_CREDENTIALS: 'Wrong email or password',
+        ACCOUNT_LOCKED: 'The account has been locked due to numerous failed login attempts. Please contact an administrator if you are the owner.',
+        USER_NOT_FOUND: 'No account tied to that mail address',
       };
       errorMessage.value = errorMap[code] || error.response?.data?.message || 'Error al iniciar sesión';
     }
@@ -78,7 +78,7 @@ const handleLogin = async () => {
           TaskFlow
         </p>
         <h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
-          Iniciar sesion
+          login
         </h1>
       </div>
 
@@ -120,17 +120,17 @@ const handleLogin = async () => {
           :disabled="isDisabled"
           class="primary-button w-full"
         >
-          {{ loading ? 'Ingresando...' : isRateLimited ? `Espera ${rateLimitSeconds}s` : 'Iniciar sesion' }}
+          {{ loading ? 'Login in...' : isRateLimited ? `Wait ${rateLimitSeconds}s` : 'Login' }}
         </button>
       </form>
 
       <p class="mt-6 text-center text-sm text-slate-600">
-        No tienes cuenta?
+        No account?
         <RouterLink
           :to="{ name: 'register' }"
           class="font-medium text-slate-950 underline underline-offset-4"
         >
-          Crear cuenta
+          Create one
         </RouterLink>
       </p>
     </section>
