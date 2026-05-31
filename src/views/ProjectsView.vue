@@ -42,6 +42,7 @@ const mapError = (error, fallback) => {
 };
 
 const handleCreate = async () => {
+  if (!createForm.name.trim() || !createForm.teamId) return;
   try {
     creating.value = true;
     createError.value = '';
@@ -58,8 +59,12 @@ const handleCreate = async () => {
 };
 
 onMounted(async () => {
-  await teamsStore.fetchTeams();
-  if (teamOptions.value.length) createForm.teamId = teamOptions.value[0].value;
+  try {
+    await teamsStore.fetchTeams();
+    if (teamOptions.value.length) createForm.teamId = teamOptions.value[0].value;
+  } catch {
+    listError.value = 'No se pudieron cargar los equipos';
+  }
   try {
     await projectsStore.fetchProjects();
   } catch {
