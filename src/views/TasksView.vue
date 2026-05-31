@@ -476,7 +476,7 @@ onMounted(async () => {
       <div class="space-y-4">
         <!-- Selector de equipo -->
         <div class="flex items-center gap-3">
-          <label class="text-sm font-medium text-slate-700">Equipo:</label>
+          <label class="text-sm font-medium text-slate-700">Team:</label>
           <div class="flex flex-wrap gap-2">
             <button
               v-for="team in teamsStore.teams"
