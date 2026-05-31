@@ -7,27 +7,27 @@ const props = defineProps({
 
 const labelMap = {
   // Task status
-  PENDING:     'Pendiente',
-  IN_PROGRESS: 'En progreso',
-  REVIEW:      'En revisión',
-  COMPLETED:   'Completada',
-  CANCELLED:   'Cancelada',
+  PENDING:     'Pending',
+  IN_PROGRESS: 'En progress',
+  REVIEW:      'In review',
+  COMPLETED:   'Completed',
+  CANCELLED:   'Cancelled',
   // Pro Team status
-  ACTIVE:      'Activo',
-  INACTIVE:    'Inactivo',
-  ARCHIVED:    'Archivado',
+  ACTIVE:      'Active',
+  INACTIVE:    'Inactive',
+  ARCHIVED:    'Archived',
   // User status
-  online:      'En línea',
-  offline:     'Desconectado',
+  online:      'Online',
+  offline:     'Offline',
   // Team roles
   OWNER:       'Owner',
   MANAGER:     'Manager',
-  MEMBER:      'Miembro',
-  CLIENT:      'Cliente',
+  MEMBER:      'Member',
+  CLIENT:      'Client',
   // Global roles
   admin:       'Admin',
-  user:        'Usuario',
-  client:      'Cliente',
+  user:        'User',
+  client:      'Client',
 };
 
 const colorMap = {

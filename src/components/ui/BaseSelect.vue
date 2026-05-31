@@ -6,7 +6,7 @@ defineProps({
   label: { type: String, default: '' },
   error: { type: String, default: '' },
   id: { type: String, required: true },
-  placeholder: { type: String, default: 'Selecciona una opción' },
+  placeholder: { type: String, default: 'Select an option' },
   options: {
     type: Array,
     default: () => [],

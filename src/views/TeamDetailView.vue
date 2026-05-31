@@ -306,7 +306,7 @@ watch(() => props.teamId, () => { loadTeam(); resetForm(); });
       <div class="rounded-lg border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-slate-200 px-5 py-4">
           <h2 class="text-base font-semibold text-slate-950">
-            Miembros
+            Members
             <span v-if="teamsStore.members.length" class="ml-2 text-sm font-normal text-slate-400">
               ({{ teamsStore.members.length }})
             </span>

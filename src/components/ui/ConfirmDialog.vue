@@ -1,10 +1,10 @@
 <script setup>
 defineProps({
   open: { type: Boolean, default: false },
-  title: { type: String, default: '¿Estás seguro?' },
+  title: { type: String, default: 'You sure?' },
   description: { type: String, default: '' },
-  confirmLabel: { type: String, default: 'Confirmar' },
-  cancelLabel: { type: String, default: 'Cancelar' },
+  confirmLabel: { type: String, default: 'Confirm' },
+  cancelLabel: { type: String, default: 'Cancel' },
   confirmVariant: {
     type: String,
     default: 'danger',
