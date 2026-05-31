@@ -156,7 +156,7 @@ const handleLogout = async () => {
               class="secondary-button"
               @click="handleLogout"
             >
-              Logout
+              Log out
             </button>
           </div>
         </div>

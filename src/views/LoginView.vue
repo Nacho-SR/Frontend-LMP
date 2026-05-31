@@ -78,7 +78,7 @@ const handleLogin = async () => {
           TaskFlow
         </p>
         <h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
-          login
+          Login
         </h1>
       </div>
 
@@ -120,7 +120,7 @@ const handleLogin = async () => {
           :disabled="isDisabled"
           class="primary-button w-full"
         >
-          {{ loading ? 'Logging in...' : isRateLimited ? `Wait ${rateLimitSeconds}s` : 'Login' }}
+          {{ loading ? 'Logging in...' : isRateLimited ? `Wait ${rateLimitSeconds}s` : 'Log in' }}
         </button>
       </form>
 
