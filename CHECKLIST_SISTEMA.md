@@ -521,13 +521,20 @@ Pendientes transversales importantes:
 
 - Vista Dashboard existe.
 - Layout protegido carga dashboard.
+- `dashboard.service.js` creado (`GET /api/dashboard/summary`).
+- Summary cargado directamente en `DashboardView.vue` (sin store separado).
+- Tarjetas de resumen: equipos, proyectos activos, tareas totales, asignadas al usuario, vencidas.
+- Tareas por estado y por prioridad con badges de color.
+- Resumen por proyecto con estado y conteos.
+- Accesos rapidos: Equipos, Proyectos, Tareas, Notificaciones.
+- Loading / error / empty manejados.
 
 ### Falta Critico
 
-- [ ] Crear `dashboard.service.js`.
-- [ ] Crear `dashboard.store.js` o cargar summary directo en vista.
-- [ ] Consumir `GET /api/dashboard/summary`.
-- [ ] Mostrar:
+- [x] Crear `dashboard.service.js`.
+- [x] Crear `dashboard.store.js` o cargar summary directo en vista.
+- [x] Consumir `GET /api/dashboard/summary`.
+- [x] Mostrar:
   - equipos visibles
   - proyectos por status
   - tareas totales
@@ -536,12 +543,12 @@ Pendientes transversales importantes:
   - tareas vencidas
   - tareas asignadas al usuario
   - resumen por proyecto
-- [ ] Agregar accesos rapidos:
-  - crear equipo
-  - crear proyecto
-  - ver tareas
-  - abrir notificaciones
-- [ ] Manejar loading/error/empty.
+- [x] Agregar accesos rapidos:
+  - equipos
+  - proyectos
+  - tareas
+  - notificaciones
+- [x] Manejar loading/error/empty.
 
 ### Endpoints Relacionados
 
