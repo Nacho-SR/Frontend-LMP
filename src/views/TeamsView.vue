@@ -13,7 +13,7 @@ import StatusBadge from '../components/ui/StatusBadge.vue';
 import { useTeamsStore } from '../stores/teams.store';
 
 const teamsStore = useTeamsStore();
-const activeForm = ref(null); // 'create' | 'join' | null
+const activeForm = ref(null);
 const createError = ref('');
 const joinError = ref('');
 const creating = ref(false);

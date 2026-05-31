@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
 
 import AlertMessage from '../components/ui/AlertMessage.vue';
@@ -11,9 +11,11 @@ import EmptyState from '../components/ui/EmptyState.vue';
 import LoadingState from '../components/ui/LoadingState.vue';
 import PageHeader from '../components/ui/PageHeader.vue';
 import StatusBadge from '../components/ui/StatusBadge.vue';
+import { useAuthStore } from '../stores/auth.store';
 import { useProjectsStore } from '../stores/projects.store';
 import { useTeamsStore } from '../stores/teams.store';
 
+const authStore = useAuthStore();
 const projectsStore = useProjectsStore();
 const teamsStore = useTeamsStore();
 
@@ -30,6 +32,18 @@ const teamOptions = computed(() =>
 
 const teamName = (teamId) =>
   teamsStore.teams.find((t) => t.id === teamId)?.name ?? '—';
+
+const canCreateInTeam = computed(() => {
+  if (!createForm.teamId) return false;
+  const uid = authStore.user?.id;
+  const member = teamsStore.members.find((m) => m.userId === uid);
+  return ['OWNER', 'MANAGER'].includes(member?.role);
+});
+
+watch(() => createForm.teamId, async (teamId) => {
+  if (!teamId) return;
+  try { await teamsStore.fetchMembers(teamId); } catch {}
+});
 
 const ERRORS = {
   INSUFFICIENT_TEAM_ROLE: 'No tienes permiso para crear proyectos en este equipo',
@@ -130,9 +144,11 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- Crear proyecto -->
-      <aside>
+      <!-- Columna derecha -->
+      <div>
+        <!-- Formulario (tiene equipos) -->
         <form
+          v-if="teamOptions.length"
           class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
           @submit.prevent="handleCreate"
         >
@@ -146,27 +162,29 @@ onMounted(async () => {
               v-model="createForm.teamId"
               label="Equipo"
               :options="teamOptions"
-              :disabled="!teamOptions.length"
             />
           </div>
 
-          <p v-if="!teamOptions.length" class="mt-2 text-xs text-slate-400">
-            Debes pertenecer a un equipo para crear proyectos.
+          <p v-if="createForm.teamId && !canCreateInTeam" class="mt-2 text-xs text-amber-600">
+            Solo el propietario y los managers pueden crear proyectos en este equipo.
           </p>
 
           <AlertMessage v-if="createError" type="error" :message="createError" class="mt-3" />
           <AlertMessage v-if="createSuccess" type="success" :message="createSuccess" class="mt-3" />
 
-          <BaseButton
-            type="submit"
-            :loading="creating"
-            :disabled="!teamOptions.length"
-            class="mt-4 w-full"
-          >
+          <BaseButton type="submit" :loading="creating" :disabled="!canCreateInTeam" class="mt-4 w-full">
             Crear proyecto
           </BaseButton>
         </form>
-      </aside>
+
+        <!-- Sin equipos (bloqueado) -->
+        <div
+          v-else
+          class="rounded-lg border border-slate-200 bg-white p-5 text-sm text-slate-500 shadow-sm"
+        >
+          Debes pertenecer a un equipo para crear proyectos.
+        </div>
+      </div>
     </div>
   </section>
 </template>
