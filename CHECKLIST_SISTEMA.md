@@ -48,7 +48,7 @@ Pendientes transversales importantes:
 
 - [ ] Probar flujo completo contra backend real.
 - [ ] Corregir textos con encoding roto (`Ã`, `Â`, etc.).
-- [ ] Conectar dashboard real con `GET /api/dashboard/summary`.
+- [x] Conectar dashboard real con `GET /api/dashboard/summary`.
 - [x] Integrar comentarios de tareas.
 - [x] Ajustar notificaciones a timestamps ISO 8601.
 - [ ] Completar filtros/query params documentados en `API_FRONTEND.md`.
