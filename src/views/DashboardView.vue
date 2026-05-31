@@ -35,7 +35,7 @@ const STATUS_COLOR = {
   COMPLETED: 'bg-green-50 text-green-700',
   CANCELLED: 'bg-red-50 text-red-600',
 };
-const PROJECT_STATUS_LABEL = { ACTIVE: 'Activo', ARCHIVED: 'Archivado', COMPLETED: 'Completado' };
+const PROJECT_STATUS_LABEL = { ACTIVE: 'Active', ARCHIVED: 'Archived', COMPLETED: 'Completed' };
 const PROJECT_STATUS_COLOR = {
   ACTIVE: 'bg-blue-50 text-blue-700',
   ARCHIVED: 'bg-slate-100 text-slate-500',

@@ -120,7 +120,7 @@ const handleLogin = async () => {
           :disabled="isDisabled"
           class="primary-button w-full"
         >
-          {{ loading ? 'Login in...' : isRateLimited ? `Wait ${rateLimitSeconds}s` : 'Login' }}
+          {{ loading ? 'Logging in...' : isRateLimited ? `Wait ${rateLimitSeconds}s` : 'Login' }}
         </button>
       </form>
 

@@ -107,12 +107,12 @@ const canChangeRoles = computed(() => myRole.value === 'OWNER');
 const roleOptions = [
   { value: 'OWNER', label: 'Owner' },
   { value: 'MANAGER', label: 'Manager' },
-  { value: 'MEMBER', label: 'Miembro' },
-  { value: 'CLIENT', label: 'Cliente' },
+  { value: 'MEMBER', label: 'Member' },
+  { value: 'CLIENT', label: 'Client' },
 ];
 
 const memberDisplayName = (member) => {
-  if (member.userId === authStore.user?.id) return 'Tu';
+  if (member.userId === authStore.user?.id) return 'You';
 
   return member.user?.displayName || member.user?.userName || member.userId;
 };
@@ -126,15 +126,15 @@ const memberSubtitle = (member) => {
 };
 
 const ERRORS = {
-  TEAM_NOT_FOUND: 'Equipo no encontrado',
-  UNAUTHORIZED: 'No tienes acceso a este equipo',
-  UNAUTHORIZED_TEAM_ACCESS: 'No tienes permiso para modificar este equipo',
-  INSUFFICIENT_TEAM_ROLE: 'Tu rol no permite esta acción',
-  USER_ALREADY_IN_TEAM: 'El usuario ya pertenece a este equipo',
-  MEMBER_NOT_FOUND: 'Miembro no encontrado',
-  OWNER_CANNOT_BE_REMOVED: 'No se puede quitar al propietario del equipo',
-  LAST_OWNER_CANNOT_BE_CHANGED: 'No se puede degradar al ultimo propietario',
-  OWNER_CANNOT_BE_DEGRADED: 'No se puede degradar al propietario del equipo',
+  TEAM_NOT_FOUND: 'Team not found',
+  UNAUTHORIZED: 'You have no access to this team',
+  UNAUTHORIZED_TEAM_ACCESS: 'You have no permission to modify this team',
+  INSUFFICIENT_TEAM_ROLE: 'Your role does not allow this action',
+  USER_ALREADY_IN_TEAM: 'The user already belongs to this team',
+  MEMBER_NOT_FOUND: 'Member not found',
+  OWNER_CANNOT_BE_REMOVED: 'Unable to remove team owner.',
+  LAST_OWNER_CANNOT_BE_CHANGED: 'Unable to change last owner',
+  OWNER_CANNOT_BE_DEGRADED: 'Unalbe do demote owner',
 };
 
 const mapError = (error, fallback) => {
@@ -150,7 +150,7 @@ const loadTeam = async () => {
       teamsStore.fetchMembers(props.teamId),
     ]);
   } catch (error) {
-    pageError.value = mapError(error, 'No se pudo cargar el equipo');
+    pageError.value = mapError(error, 'Unable to load the team');
   }
 };
 
@@ -166,12 +166,12 @@ const openEditTeam = () => {
 
 const handleUpdateTeam = async () => {
   if (!editForm.name.trim()) {
-    editError.value = 'El nombre del equipo es obligatorio';
+    editError.value = 'Team name is required';
     return;
   }
 
   if (editForm.password && editForm.password.length < 6) {
-    editError.value = 'La contrasena debe tener al menos 6 caracteres';
+    editError.value = 'The password must have at least 6 characters';
     return;
   }
 
@@ -190,10 +190,10 @@ const handleUpdateTeam = async () => {
     }
 
     await teamsStore.updateTeam(props.teamId, payload);
-    editSuccess.value = 'Equipo actualizado correctamente';
+    editSuccess.value = 'Team updated';
     editing.value = false;
   } catch (error) {
-    editError.value = mapError(error, 'No se pudo actualizar el equipo');
+    editError.value = mapError(error, 'Unable to update team');
   } finally {
     savingTeam.value = false;
   }
@@ -207,7 +207,7 @@ const handleArchiveTeam = async () => {
     router.push({ name: 'teams' });
   } catch (error) {
     archiveConfirm.open = false;
-    archiveError.value = mapError(error, 'No se pudo archivar el equipo');
+    archiveError.value = mapError(error, 'Unable to archive team');
   } finally {
     archiveConfirm.loading = false;
   }
@@ -220,10 +220,10 @@ const handleAddMember = async () => {
     addError.value = '';
     addSuccess.value = '';
     await teamsStore.addMember(props.teamId, { userId: selectedUser.value.id, role: selectedRole.value });
-    addSuccess.value = `${selectedUser.value.displayName} fue agregado al equipo`;
+    addSuccess.value = `${selectedUser.value.displayName} was added to the team`;
     resetForm();
   } catch (error) {
-    addError.value = mapError(error, 'No se pudo agregar el miembro');
+    addError.value = mapError(error, 'Unable to add member');
   } finally {
     adding.value = false;
   }
@@ -243,10 +243,10 @@ const handleRemoveMember = async () => {
     await teamsStore.removeMember(props.teamId, confirm.userId);
     confirm.open = false;
     confirm.userId = null;
-    removeSuccess.value = 'Miembro eliminado del equipo';
+    removeSuccess.value = 'Member removed from team';
   } catch (error) {
     confirm.open = false;
-    removeError.value = mapError(error, 'No se pudo quitar al miembro');
+    removeError.value = mapError(error, 'Unable to remove member');
   } finally {
     confirm.loading = false;
   }
@@ -261,9 +261,9 @@ const handleRoleChange = async (member, event) => {
     roleError.value = '';
     roleSuccess.value = '';
     await teamsStore.updateMemberRole(props.teamId, member.userId, role);
-    roleSuccess.value = 'Rol actualizado correctamente';
+    roleSuccess.value = 'Role updated';
   } catch (error) {
-    roleError.value = mapError(error, 'No se pudo cambiar el rol del miembro');
+    roleError.value = mapError(error, 'Unable to change role');
   } finally {
     roleUpdatingId.value = null;
   }
@@ -281,13 +281,13 @@ watch(() => props.teamId, () => { loadTeam(); resetForm(); });
         :to="{ name: 'teams' }"
         class="inline-flex items-center gap-1 text-sm font-medium text-slate-500 underline underline-offset-4"
       >
-        ← Equipos
+        ← Teams
       </RouterLink>
 
       <div class="mt-3 flex flex-wrap items-start justify-between gap-3">
         <div>
           <PageHeader
-            :title="teamsStore.selectedTeam?.name || 'Equipo'"
+            :title="teamsStore.selectedTeam?.name || 'Team'"
             :subtitle="teamsStore.selectedTeam?.description || ''"
           />
         </div>
@@ -313,12 +313,12 @@ watch(() => props.teamId, () => { loadTeam(); resetForm(); });
           </h2>
         </div>
 
-        <LoadingState v-if="teamsStore.membersLoading" message="Cargando miembros..." />
+        <LoadingState v-if="teamsStore.membersLoading" message="Loading members..." />
 
         <EmptyState
           v-else-if="!teamsStore.members.length"
-          title="Sin miembros"
-          description="Este equipo no tiene miembros todavía."
+          title="No members"
+          description="This team has no members."
         />
 
         <div v-else class="divide-y divide-slate-100">
@@ -340,13 +340,11 @@ watch(() => props.teamId, () => { loadTeam(); resetForm(); });
                 :value="member.role"
                 class="h-9 rounded-md border border-slate-300 bg-white px-2 text-xs font-medium text-slate-700 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
                 :disabled="roleUpdatingId === member.userId"
-                @change="handleRoleChange(member, $event)"
-              >
+                @change="handleRoleChange(member, $event)">
                 <option
                   v-for="option in roleOptions"
                   :key="option.value"
-                  :value="option.value"
-                >
+                  :value="option.value">
                   {{ option.label }}
                 </option>
               </select>
@@ -355,9 +353,8 @@ watch(() => props.teamId, () => { loadTeam(); resetForm(); });
                 v-if="canRemoveMembers && member.role !== 'OWNER'"
                 type="button"
                 class="danger-button"
-                @click="openRemoveConfirm(member.userId)"
-              >
-                Quitar
+                @click="openRemoveConfirm(member.userId)">
+                Remove
               </button>
             </div>
           </div>
@@ -376,28 +373,28 @@ watch(() => props.teamId, () => { loadTeam(); resetForm(); });
           class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
         >
           <div class="flex items-center justify-between gap-3">
-            <h2 class="text-base font-semibold text-slate-950">Administrar equipo</h2>
+            <h2 class="text-base font-semibold text-slate-950">Manage team</h2>
             <button
               v-if="!editing"
               type="button"
               class="text-sm font-medium text-indigo-600 hover:text-indigo-700"
               @click="openEditTeam"
             >
-              Editar
+              Edit
             </button>
           </div>
 
           <template v-if="editing">
             <div class="mt-4 space-y-1">
-              <BaseInput id="edit-team-name" v-model="editForm.name" label="Nombre" required />
-              <BaseTextarea id="edit-team-desc" v-model="editForm.description" label="Descripcion" :rows="2" />
+              <BaseInput id="edit-team-name" v-model="editForm.name" label="Name" required />
+              <BaseTextarea id="edit-team-desc" v-model="editForm.description" label="Description" :rows="2" />
               <BaseInput
                 id="edit-team-password"
                 v-model="editForm.password"
-                label="Nueva contrasena de acceso"
+                label="New access password"
                 type="password"
                 minlength="6"
-                placeholder="Dejar vacia para no cambiar"
+                placeholder="Leave empty for no changes"
               />
             </div>
 
@@ -409,14 +406,14 @@ watch(() => props.teamId, () => { loadTeam(); resetForm(); });
                 class="flex-1"
                 @click="handleUpdateTeam"
               >
-                Guardar
+                Save
               </BaseButton>
               <BaseButton
                 variant="secondary"
                 :disabled="savingTeam"
                 @click="editing = false"
               >
-                Cancelar
+                Cancel
               </BaseButton>
             </div>
           </template>
@@ -425,14 +422,12 @@ watch(() => props.teamId, () => { loadTeam(); resetForm(); });
 
           <div
             v-if="canArchiveTeam"
-            class="mt-4 border-t border-slate-100 pt-4"
-          >
+            class="mt-4 border-t border-slate-100 pt-4">
             <BaseButton
               variant="danger"
               class="w-full justify-center"
-              @click="archiveConfirm.open = true"
-            >
-              Archivar equipo
+              @click="archiveConfirm.open = true">
+              Archive team
             </BaseButton>
           </div>
         </div>
@@ -443,7 +438,7 @@ watch(() => props.teamId, () => { loadTeam(); resetForm(); });
           class="flex flex-col rounded-lg border border-slate-200 bg-white shadow-sm"
         >
           <div class="border-b border-slate-200 px-5 py-4">
-            <h2 class="text-base font-semibold text-slate-950">Agregar miembro</h2>
+            <h2 class="text-base font-semibold text-slate-950">Add member</h2>
           </div>
 
           <!-- Barra de búsqueda -->
@@ -451,20 +446,19 @@ watch(() => props.teamId, () => { loadTeam(); resetForm(); });
             <BaseInput
               id="user-filter"
               v-model="userFilter"
-              placeholder="Buscar por nombre o usuario…"
+              placeholder="Seach by name or user…"
               :disabled="usersLoading"
             />
           </div>
 
           <!-- Lista de usuarios -->
           <div class="mt-2 max-h-56 overflow-y-auto divide-y divide-slate-100">
-            <LoadingState v-if="usersLoading" message="Cargando usuarios…" />
+            <LoadingState v-if="usersLoading" message="Loading users…" />
 
             <EmptyState
               v-else-if="userFilter.trim() && !filteredUsers.length"
-              title="Sin resultados"
-              description="No hay usuarios que coincidan."
-            />
+              title="No results"
+              description="No matching users."/>
 
             <button
               v-for="user in filteredUsers"
@@ -476,8 +470,7 @@ watch(() => props.teamId, () => { loadTeam(); resetForm(); });
                   ? 'bg-indigo-50'
                   : 'hover:bg-slate-50',
               ]"
-              @click="selectUser(user)"
-            >
+              @click="selectUser(user)">
               <div class="min-w-0">
                 <p class="truncate text-sm font-medium text-slate-950">{{ user.displayName }}</p>
                 <p class="truncate text-xs text-slate-400">@{{ user.userName }}</p>
@@ -501,9 +494,9 @@ watch(() => props.teamId, () => { loadTeam(); resetForm(); });
               <p class="flex-1 truncate text-sm font-medium text-indigo-900">{{ selectedUser.displayName }}</p>
               <button type="button" class="text-xs text-indigo-400 hover:text-indigo-600" @click="resetForm">✕</button>
             </div>
-            <BaseSelect id="member-role" v-model="selectedRole" label="Rol" :options="roleOptions" />
+            <BaseSelect id="member-role" v-model="selectedRole" label="Role" :options="roleOptions" />
             <AlertMessage v-if="addError" type="error" :message="addError" />
-            <BaseButton :loading="adding" class="w-full" @click="handleAddMember">Agregar</BaseButton>
+            <BaseButton :loading="adding" class="w-full" @click="handleAddMember">Add</BaseButton>
           </div>
 
           <div v-if="addSuccess" class="px-4 pb-4">
@@ -516,7 +509,7 @@ watch(() => props.teamId, () => { loadTeam(); resetForm(); });
           v-else-if="myRole"
           class="rounded-lg border border-slate-200 bg-white p-5 text-sm text-slate-500 shadow-sm"
         >
-          Solo el propietario y los managers pueden agregar miembros.
+          Only managers and owners can add members.
         </div>
       </div>
     </div>
@@ -524,9 +517,9 @@ watch(() => props.teamId, () => { loadTeam(); resetForm(); });
     <!-- Confirmación de quitar miembro -->
     <ConfirmDialog
       :open="confirm.open"
-      title="¿Quitar miembro?"
-      description="Esta acción eliminará al usuario del equipo. No se puede deshacer."
-      confirm-label="Quitar"
+      title="Remove member?"
+      description="If you do this you will have to add the member back manually."
+      confirm-label="Remove"
       confirm-variant="danger"
       :loading="confirm.loading"
       @confirm="handleRemoveMember"
@@ -535,9 +528,9 @@ watch(() => props.teamId, () => { loadTeam(); resetForm(); });
 
     <ConfirmDialog
       :open="archiveConfirm.open"
-      title="Â¿Archivar equipo?"
-      description="El equipo dejarÃ¡ de aparecer como activo. Esta acciÃ³n puede afectar proyectos, tableros y tareas relacionados."
-      confirm-label="Archivar"
+      title="Archive team?"
+      description="The team will no longer be active and all of the children elements will be affected"
+      confirm-label="Archive"
       confirm-variant="danger"
       :loading="archiveConfirm.loading"
       @confirm="handleArchiveTeam"
