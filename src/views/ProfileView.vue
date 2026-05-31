@@ -59,7 +59,7 @@ const handleLogout = async () => {
   <section class="space-y-6">
     <div>
       <p class="text-sm font-medium text-slate-500">Account</p>
-      <h1 class="mt-1 text-2xl font-semibold tracking-tight text-slate-950">Mi perfil</h1>
+      <h1 class="mt-1 text-2xl font-semibold tracking-tight text-slate-950">My profile</h1>
     </div>
 
     <!-- Datos del usuario -->
