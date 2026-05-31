@@ -905,9 +905,9 @@ onMounted(async () => {
       >
         <div class="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" @click="selectedTask = null" />
 
-        <div class="relative w-full max-w-lg rounded-lg border border-slate-200 bg-white shadow-lg">
+        <div class="relative flex flex-col w-full max-w-lg max-h-[90vh] rounded-lg border border-slate-200 bg-white shadow-lg">
           <!-- Cabecera modal -->
-          <div class="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
+          <div class="shrink-0 flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
             <div class="min-w-0 flex-1">
               <p v-if="taskDetailMode === 'view'" class="text-base font-semibold text-slate-950 leading-snug text-white-800 hover:text-blue-200">
                 <RouterLink :to="{ name: 'task-detail', params: { taskId: selectedTask.id } }">
@@ -928,7 +928,7 @@ onMounted(async () => {
           </div>
 
           <!-- Cuerpo: modo vista -->
-          <div v-if="taskDetailMode === 'view'" class="space-y-3 px-6 py-4">
+          <div v-if="taskDetailMode === 'view'" class="flex-1 overflow-y-auto space-y-3 px-6 py-4">
             <!-- Badges -->
             <div class="flex flex-wrap gap-2">
               <span
@@ -1020,7 +1020,7 @@ onMounted(async () => {
           </div>
 
           <!-- Cuerpo: modo edición (solo OWNER/MANAGER) -->
-          <div v-else class="px-6 py-4">
+          <div v-else class="flex-1 overflow-y-auto px-6 py-4">
             <div class="grid gap-3 sm:grid-cols-2">
               <div class="sm:col-span-2">
                 <BaseInput id="et-name" v-model="editForm.name" label="Name" required />
@@ -1101,7 +1101,7 @@ onMounted(async () => {
                 The task is already full of workers
               </p>
               <p v-else-if="!assignableMemberOptions.length" class="mt-2 text-xs text-slate-500">
-                All available members have already been assinged
+                All available members have already been assigned
               </p>
               <AlertMessage v-if="assignError" type="error" :message="assignError" class="mt-3" />
               <AlertMessage v-if="assignSuccess" type="success" :message="assignSuccess" class="mt-3" />
@@ -1110,7 +1110,7 @@ onMounted(async () => {
           </div>
 
           <!-- Pie del modal -->
-          <div class="flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+          <div class="shrink-0 flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
             <template v-if="taskDetailMode === 'view'">
               <!-- Asignarme: tarea pendiente/en-progreso sin cupo lleno y no soy asignado -->
               <BaseButton

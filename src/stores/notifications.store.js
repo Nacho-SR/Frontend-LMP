@@ -8,6 +8,10 @@ export const useNotificationsStore = defineStore('notifications', {
     loading: false,
   }),
 
+  getters: {
+    unreadCount: (state) => state.notifications.filter((n) => !n.read).length,
+  },
+
   actions: {
     async fetchNotifications() {
       this.loading = true;

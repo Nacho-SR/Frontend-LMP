@@ -1,11 +1,17 @@
 <script setup>
-import { computed } from 'vue';
-import { RouterLink, useRouter } from 'vue-router';
+import { computed, onMounted, watch } from 'vue';
+import { RouterLink, useRoute, useRouter } from 'vue-router';
 
 import { useAuthStore } from '../../stores/auth.store';
+import { useNotificationsStore } from '../../stores/notifications.store';
 
 const authStore = useAuthStore();
+const notificationsStore = useNotificationsStore();
+const route = useRoute();
 const router = useRouter();
+
+onMounted(() => notificationsStore.fetchNotifications());
+watch(() => route.path, () => notificationsStore.fetchNotifications());
 
 const userInitials = computed(() => {
   const source =
@@ -84,6 +90,12 @@ const handleLogout = async () => {
             <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
           </svg>
           Notifications
+          <span
+            v-if="notificationsStore.unreadCount"
+            class="ml-auto rounded-full bg-red-500 px-1.5 py-0.5 text-xs font-semibold text-white"
+          >
+            {{ notificationsStore.unreadCount }}
+          </span>
         </RouterLink>
       </nav>
 
@@ -128,7 +140,15 @@ const handleLogout = async () => {
             <RouterLink :to="{ name: 'teams' }" class="mobile-link shrink-0">Equipos</RouterLink>
             <RouterLink :to="{ name: 'projects' }" class="mobile-link shrink-0">Proyectos</RouterLink>
             <RouterLink :to="{ name: 'tasks' }" class="mobile-link shrink-0">Tareas</RouterLink>
-            <RouterLink :to="{ name: 'notifications' }" class="mobile-link shrink-0">Avisos</RouterLink>
+            <RouterLink :to="{ name: 'notifications' }" class="mobile-link shrink-0">
+              Avisos
+              <span
+                v-if="notificationsStore.unreadCount"
+                class="ml-1 rounded-full bg-red-500 px-1.5 py-0.5 text-xs font-semibold text-white"
+              >
+                {{ notificationsStore.unreadCount }}
+              </span>
+            </RouterLink>
           </nav>
 
           <!-- Usuario y logout -->

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
 
 import AlertMessage from '../components/ui/AlertMessage.vue';
@@ -11,9 +11,11 @@ import EmptyState from '../components/ui/EmptyState.vue';
 import LoadingState from '../components/ui/LoadingState.vue';
 import PageHeader from '../components/ui/PageHeader.vue';
 import StatusBadge from '../components/ui/StatusBadge.vue';
+import { useAuthStore } from '../stores/auth.store';
 import { useProjectsStore } from '../stores/projects.store';
 import { useTeamsStore } from '../stores/teams.store';
 
+const authStore = useAuthStore();
 const projectsStore = useProjectsStore();
 const teamsStore = useTeamsStore();
 
@@ -31,6 +33,18 @@ const teamOptions = computed(() =>
 const teamName = (teamId) =>
   teamsStore.teams.find((t) => t.id === teamId)?.name ?? '—';
 
+const canCreateInTeam = computed(() => {
+  if (!createForm.teamId) return false;
+  const uid = authStore.user?.id;
+  const member = teamsStore.members.find((m) => m.userId === uid);
+  return ['OWNER', 'MANAGER'].includes(member?.role);
+});
+
+watch(() => createForm.teamId, async (teamId) => {
+  if (!teamId) return;
+  try { await teamsStore.fetchMembers(teamId); } catch {}
+});
+
 const ERRORS = {
   INSUFFICIENT_TEAM_ROLE: 'You do not have permissions to create projects for this team',
   UNAUTHORIZED_TEAM_ACCESS: 'You are not a member of this team',
@@ -42,6 +56,7 @@ const mapError = (error, fallback) => {
 };
 
 const handleCreate = async () => {
+  if (!createForm.name.trim() || !createForm.teamId) return;
   try {
     creating.value = true;
     createError.value = '';
@@ -58,8 +73,12 @@ const handleCreate = async () => {
 };
 
 onMounted(async () => {
-  await teamsStore.fetchTeams();
-  if (teamOptions.value.length) createForm.teamId = teamOptions.value[0].value;
+  try {
+    await teamsStore.fetchTeams();
+    if (teamOptions.value.length) createForm.teamId = teamOptions.value[0].value;
+  } catch {
+    listError.value = 'No se pudieron cargar los equipos';
+  }
   try {
     await projectsStore.fetchProjects();
   } catch {
@@ -125,9 +144,11 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- Crear proyecto -->
-      <aside>
+      <!-- Columna derecha -->
+      <div>
+        <!-- Formulario (tiene equipos) -->
         <form
+          v-if="teamOptions.length"
           class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
           @submit.prevent="handleCreate"
         >
@@ -141,27 +162,32 @@ onMounted(async () => {
               v-model="createForm.teamId"
               label="Team"
               :options="teamOptions"
-              :disabled="!teamOptions.length"
             />
           </div>
 
           <p v-if="!teamOptions.length" class="mt-2 text-xs text-slate-400">
             You must belong to a team to create a project.
           </p>
+          <p v-else-if="createForm.teamId && !canCreateInTeam" class="mt-2 text-xs text-amber-600">
+            Only owners and managers can create projects in this team.
+          </p>
 
           <AlertMessage v-if="createError" type="error" :message="createError" class="mt-3" />
           <AlertMessage v-if="createSuccess" type="success" :message="createSuccess" class="mt-3" />
 
-          <BaseButton
-            type="submit"
-            :loading="creating"
-            :disabled="!teamOptions.length"
-            class="mt-4 w-full"
-          >
+          <BaseButton type="submit" :loading="creating" :disabled="!canCreateInTeam" class="mt-4 w-full">
             Create project
           </BaseButton>
         </form>
-      </aside>
+
+        <!-- Sin equipos (bloqueado) -->
+        <div
+          v-else
+          class="rounded-lg border border-slate-200 bg-white p-5 text-sm text-slate-500 shadow-sm"
+        >
+          Debes pertenecer a un equipo para crear proyectos.
+        </div>
+      </div>
     </div>
   </section>
 </template>
