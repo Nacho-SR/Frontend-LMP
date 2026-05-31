@@ -1009,10 +1009,10 @@ onMounted(async () => {
                 </BaseButton>
               </div>
               <p v-if="isTaskFull" class="mt-2 text-xs text-slate-500">
-                La tarea ya alcanzÃ³ el mÃ¡ximo de trabajadores.
+                La tarea ya alcanzó el máximo de trabajadores.
               </p>
               <p v-else-if="!assignableMemberOptions.length" class="mt-2 text-xs text-slate-500">
-                Todos los miembros disponibles ya estÃ¡n asignados.
+                Todos los miembros disponibles ya están asignados.
               </p>
               <AlertMessage v-if="assignError" type="error" :message="assignError" class="mt-3" />
               <AlertMessage v-if="assignSuccess" type="success" :message="assignSuccess" class="mt-3" />
@@ -1098,10 +1098,10 @@ onMounted(async () => {
               </div>
 
               <p v-if="isTaskFull" class="mt-2 text-xs text-slate-500">
-                La tarea ya alcanzÃ³ el mÃ¡ximo de trabajadores.
+                La tarea ya alcanzó el máximo de trabajadores.
               </p>
               <p v-else-if="!assignableMemberOptions.length" class="mt-2 text-xs text-slate-500">
-                Todos los miembros disponibles ya estÃ¡n asignados.
+                Todos los miembros disponibles ya están asignados.
               </p>
               <AlertMessage v-if="assignError" type="error" :message="assignError" class="mt-3" />
               <AlertMessage v-if="assignSuccess" type="success" :message="assignSuccess" class="mt-3" />

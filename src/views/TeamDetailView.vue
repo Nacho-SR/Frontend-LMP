@@ -535,8 +535,8 @@ watch(() => props.teamId, () => { loadTeam(); resetForm(); });
 
     <ConfirmDialog
       :open="archiveConfirm.open"
-      title="Â¿Archivar equipo?"
-      description="El equipo dejarÃ¡ de aparecer como activo. Esta acciÃ³n puede afectar proyectos, tableros y tareas relacionados."
+      title="¿Archivar equipo?"
+      description="El equipo dejará de aparecer como activo. Esta acción puede afectar proyectos, tableros y tareas relacionados."
       confirm-label="Archivar"
       confirm-variant="danger"
       :loading="archiveConfirm.loading"
