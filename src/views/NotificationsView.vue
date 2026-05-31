@@ -99,7 +99,7 @@ onMounted(() => notificationsStore.fetchNotifications());
   <section class="space-y-6">
     <div class="sticky top-16 z-10 flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 bg-gray-100 pb-4 mb-6 gap-4">
       <div>
-        <PageHeader title="Bandeja" subtitle="Notificaciones" class="m-0" />
+        <PageHeader title="Tray" subtitle="Notifications" class="m-0" />
       </div>
       
       <div class="flex items-center gap-3 self-end sm:self-auto">
