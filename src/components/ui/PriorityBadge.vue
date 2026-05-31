@@ -6,7 +6,7 @@ const props = defineProps({
   priority: { type: Number, required: true },
 });
 
-const labelMap = { 1: 'Baja', 2: 'Media', 3: 'Alta', 4: 'Urgente' };
+const labelMap = { 1: 'Low', 2: 'Medium', 3: 'High', 4: 'Urgent' };
 
 const colorMap = {
   1: 'border-green-200 bg-green-50 text-green-700',

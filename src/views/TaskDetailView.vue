@@ -118,7 +118,7 @@ const assignableMemberOptions = computed(() => {
 
 const formatDate = (dateStr) => {
   if (!dateStr) return null;
-  return new Date(dateStr).toLocaleDateString('es-MX', {
+  return new Date(dateStr).toLocaleDateString({
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -136,7 +136,7 @@ const loadTaskData = async () => {
     await tasksStore.fetchTaskDetail(props.taskId);
     
     if (!task.value) {
-      pageError.value = 'La tarea no existe.';
+      pageError.value = 'The task does not exist.';
       return;
     }
 
@@ -160,7 +160,7 @@ const loadTaskData = async () => {
     try { await tasksStore.fetchTaskComments(props.taskId); } catch {}
 
   } catch (error) {
-    pageError.value = 'No se pudo cargar la información detallada de la tarea';
+    pageError.value = 'Unable to load task information';
   } finally {
     pageLoading.value = false;
   }
@@ -197,9 +197,9 @@ const handleAssignSelectedUser = async () => {
 
     await tasksStore.assignUsers(task.value.id, [...assignedUserIds.value, assignUserId.value]);
     assignUserId.value = '';
-    assignSuccess.value = 'Miembro asignado correctamente';
+    assignSuccess.value = 'Member assigned';
   } catch (error) {
-    assignError.value = error.response?.data?.message || 'No se pudo asignar el miembro';
+    assignError.value = error.response?.data?.message || 'Unable to assign member';
   } finally {
     assigningTask.value = false;
   }
@@ -213,8 +213,8 @@ const handleAddComment = async () => {
     await tasksStore.postTaskComment(task.value.id, { content: commentContent.value.trim() });
     commentContent.value = '';
   } catch (error) {
-    const serverMessage = error.response?.data?.message || 'No tienes permisos o el formato es incorrecto.';
-    pageError.value = `No se pudo publicar el comentario: ${serverMessage}`;
+    const serverMessage = error.response?.data?.message || 'You have no permissions to do this / wrong format.';
+    pageError.value = `Unable to publish comment: ${serverMessage}`;
   } finally {
     submittingComment.value = false;
   }
@@ -227,7 +227,7 @@ const handleDeleteTask = async () => {
     deleteConfirm.open = false;
     router.push({ name: 'tasks' }); 
   } catch {
-    pageError.value = 'Error al intentar eliminar la tarea';
+    pageError.value = 'Error trying to delete the task';
   } finally {
     deleteConfirm.loading = false;
   }
@@ -261,13 +261,13 @@ onMounted(async () => {
         @click="router.back()"
         class="inline-flex items-center gap-1 text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors cursor-pointer"
       >
-        ← Volver
+        ← Return
       </button>
     </div>
 
     <AlertMessage v-if="pageError" type="error" :message="pageError" />
     
-    <LoadingState v-if="pageLoading" message="Cargando detalles de tarea..." />
+    <LoadingState v-if="pageLoading" message="Loading task details..." />
 
     <div v-else class="grid gap-6 xl:grid-cols-[1fr_360px]">
       
@@ -276,7 +276,7 @@ onMounted(async () => {
           <div class="flex items-start justify-between gap-4">
             <div>
               <span class="text-xs font-mono text-slate-400">ID: {{ task?.id || props.taskId }}</span>
-              <h1 class="text-2xl font-bold text-slate-950 mt-0.5">{{ task?.name || 'Cargando...' }}</h1>
+              <h1 class="text-2xl font-bold text-slate-950 mt-0.5">{{ task?.name || 'Loading...' }}</h1>
             </div>
             <div class="flex items-center gap-2 shrink-0" v-if="task">
               <PriorityBadge :priority="task.priority" />
@@ -287,7 +287,7 @@ onMounted(async () => {
           <div class="border-t border-slate-100 pt-4">
             <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Descripción</h3>
             <p class="mt-1 text-sm text-slate-700 whitespace-pre-wrap">
-              {{ task?.description || 'Sin descripción provista para esta tarea.' }}
+              {{ task?.description || 'No description for this task.' }}
             </p>
           </div>
 
@@ -295,7 +295,7 @@ onMounted(async () => {
             v-if="task && workerIds.length && ['REVIEW', 'COMPLETED'].includes(task.status)" 
             class="border-t border-slate-100 pt-4"
           >
-            <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Trabajadores Previos</h3>
+            <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Previous workers</h3>
             <div class="mt-1.5 flex flex-wrap gap-1">
               <span
                 v-for="uid in workerIds"
@@ -310,11 +310,11 @@ onMounted(async () => {
           <div class="border-t border-slate-100 pt-4">
             <div>
               <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                {{ task?.status === 'COMPLETED' ? 'Completado por' : 'Asignado a' }}
+                {{ task?.status === 'COMPLETED' ? 'Completed by' : 'Asisigned to' }}
               </h3>
               <div class="mt-1.5 flex flex-wrap gap-1">
                 <span v-if="!assignedUserIds.length" class="text-sm text-slate-500">
-                  Nadie asignado
+                  No one assigned
                 </span>
                 <span
                   v-for="uid in assignedUserIds"
@@ -335,8 +335,8 @@ onMounted(async () => {
               <BaseSelect
                 id="task-detail-assignee"
                 v-model="assignUserId"
-                label="Asignar miembro"
-                placeholder="Selecciona un miembro"
+                label="Assign member"
+                placeholder="Select a member"
                 :options="assignableMemberOptions"
                 :disabled="assigningTask || isTaskFull || !assignableMemberOptions.length"
               />
@@ -346,14 +346,14 @@ onMounted(async () => {
                 :disabled="!assignUserId || isTaskFull"
                 @click="handleAssignSelectedUser"
               >
-                Asignar
+                Assign
               </BaseButton>
             </div>
             <p v-if="isTaskFull" class="mt-2 text-xs text-slate-500">
-              La tarea ya alcanzó el máximo de trabajadores.
+              The task is already full of workers.
             </p>
             <p v-else-if="!assignableMemberOptions.length" class="mt-2 text-xs text-slate-500">
-              Todos los miembros disponibles ya están asignados.
+              All available members already assigned.
             </p>
             <AlertMessage v-if="assignError" type="error" :message="assignError" class="mt-3" />
             <AlertMessage v-if="assignSuccess" type="success" :message="assignSuccess" class="mt-3" />
@@ -428,19 +428,19 @@ onMounted(async () => {
 
       <aside class="space-y-4">
         <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-          <h2 class="text-base font-semibold text-slate-950 border-b border-slate-100 pb-2">Metadatos</h2>
+          <h2 class="text-base font-semibold text-slate-950 border-b border-slate-100 pb-2">Details</h2>
           
           <div class="space-y-3 text-xs">
             <div>
-              <span class="block text-slate-400 font-medium uppercase tracking-wider">Equipo</span>
+              <span class="block text-slate-400 font-medium uppercase tracking-wider">Team</span>
               <span class="text-sm font-semibold text-slate-700">{{ teamName }}</span>
             </div>
             <div>
-              <span class="block text-slate-400 font-medium uppercase tracking-wider">Proyecto</span>
+              <span class="block text-slate-400 font-medium uppercase tracking-wider">Project</span>
               <span class="text-sm font-semibold text-slate-700">{{ projectName }}</span>
             </div>
             <div v-if="task?.dueDate">
-              <span class="block text-slate-400 font-medium uppercase tracking-wider">Fecha de Vencimiento</span>
+              <span class="block text-slate-400 font-medium uppercase tracking-wider">Expiry date</span>
               <span class="text-sm font-semibold text-slate-700">
                 {{ formatDate(task.dueDate) }}
               </span>
@@ -448,7 +448,7 @@ onMounted(async () => {
           </div>
 
           <div class="border-t border-slate-100 pt-4 space-y-2" v-if="task">
-            <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Acciones de Flujo</h3>
+            <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Action Flow</h3>
             
             <BaseButton
               v-if="isMyTask && ['PENDING', 'IN_PROGRESS'].includes(task.status)"
@@ -457,7 +457,7 @@ onMounted(async () => {
               :loading="actionLoading"
               @click="handleAdvance"
             >
-              {{ task.status === 'PENDING' ? 'Iniciar Tarea' : 'Enviar a Revisión' }}
+              {{ task.status === 'PENDING' ? 'Start task' : 'Send to review' }}
             </BaseButton>
 
             <template v-if="isMyTask && task.status === 'REVIEW'">
@@ -467,15 +467,14 @@ onMounted(async () => {
                 :loading="actionLoading"
                 @click="handleReject"
               >
-                Regresar a Progreso
+                Return to project
               </BaseButton>
               <BaseButton
                 variant="primary"
                 class="w-full justify-center mt-2"
                 :loading="actionLoading"
-                @click="handleComplete"
-              >
-                Aprobar y Completar
+                @click="handleComplete">
+                Approve and complete
               </BaseButton>
             </template>
 
@@ -485,7 +484,7 @@ onMounted(async () => {
               class="w-full rounded-md border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold p-2 transition-colors mt-4"
               @click="deleteConfirm.open = true"
             >
-              Eliminar Tarea Permanentemente
+              Delete task permanently
             </button>
           </div>
         </div>
@@ -494,9 +493,9 @@ onMounted(async () => {
 
     <ConfirmDialog
       :open="deleteConfirm.open"
-      title="¿Eliminar tarea?"
-      description="Esta acción eliminará la tarea permanentemente. No se puede deshacer."
-      confirm-label="Eliminar Tarea"
+      title="Delete task?"
+      description="This action CANNOT be undone."
+      confirm-label="Delete task"
       confirm-variant="danger"
       :loading="deleteConfirm.loading"
       @confirm="handleDeleteTask"

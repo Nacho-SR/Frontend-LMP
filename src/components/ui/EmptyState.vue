@@ -1,6 +1,6 @@
 <script setup>
 defineProps({
-  title: { type: String, default: 'Sin resultados' },
+  title: { type: String, default: 'No results' },
   description: { type: String, default: '' },
 });
 </script>

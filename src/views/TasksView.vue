@@ -65,19 +65,19 @@ const selectedChartStages = ref([]);
 const loadingChartStages = ref(false);
 
 const STATUS_TABS = [
-  { value: 'ALL', label: 'Todas' },
-  { value: 'PENDING', label: 'Pendiente' },
-  { value: 'IN_PROGRESS', label: 'En progreso' },
-  { value: 'REVIEW', label: 'En revisión' },
-  { value: 'COMPLETED', label: 'Completada' },
-  { value: 'CANCELLED', label: 'Cancelada' },
+  { value: 'ALL', label: 'All' },
+  { value: 'PENDING', label: 'Pending' },
+  { value: 'IN_PROGRESS', label: 'In progress' },
+  { value: 'REVIEW', label: 'In review' },
+  { value: 'COMPLETED', label: 'Completed' },
+  { value: 'CANCELLED', label: 'Canceled' },
 ];
 
 const PRIORITY_OPTIONS = [
-  { value: '1', label: 'Baja' },
-  { value: '2', label: 'Media' },
-  { value: '3', label: 'Alta' },
-  { value: '4', label: 'Urgente' },
+  { value: '1', label: 'Low' },
+  { value: '2', label: 'Medium' },
+  { value: '3', label: 'High' },
+  { value: '4', label: 'Urgent' },
 ];
 
 const teamOptions = computed(() =>
@@ -114,7 +114,7 @@ const projectName = (id) => projectsStore.projects.find((p) => p.id === id)?.nam
 
 const formatDate = (dateStr) => {
   if (!dateStr) return null;
-  return new Date(dateStr).toLocaleDateString('es-MX', {
+  return new Date(dateStr).toLocaleDateString({
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -194,7 +194,7 @@ watch(teamFilter, async (teamId) => {
       teamsStore.fetchMembers(teamId),
     ]);
   } catch {
-    listError.value = 'No se pudieron cargar las tareas del equipo';
+    listError.value = 'Unable to load tasks for the team';
   }
 });
 
@@ -212,9 +212,9 @@ const canDelete = () =>
   myRole.value === 'OWNER' || myRole.value === 'MANAGER';
 
 const ERRORS = {
-  UNAUTHORIZED_TEAM_ACCESS: 'No tienes acceso a este equipo',
-  PROJECT_NOT_FOUND: 'El proyecto no existe',
-  PROJECT_TEAM_MISMATCH: 'El proyecto no pertenece a este equipo',
+  UNAUTHORIZED_TEAM_ACCESS: 'You have no access to this team',
+  PROJECT_NOT_FOUND: 'The project does not exist',
+  PROJECT_TEAM_MISMATCH: 'The project does not belong to this team',
 };
 
 const mapError = (error, fallback) => {
@@ -302,7 +302,7 @@ const handleSaveEdit = async () => {
     await tasksStore.updateTask(editingTask.value.id, payload);
     editingTask.value = null;
   } catch (err) {
-    editError.value = err.response?.data?.message || 'No se pudo actualizar la tarea';
+    editError.value = err.response?.data?.message || 'Unable to update task';
   } finally {
     savingEdit.value = false;
   }
@@ -317,10 +317,8 @@ const handleSendToBoard = async (task, chartId) => {
   try {
     sendingToBoardId.value = task.id;
     const stages = await getChartStages(chartId, task.teamId);
-    // Busca el stage que corresponde al status actual, o el primero disponible
     const target = findStageForStatus(stages, task.status) || stages[0];
     if (!target) return;
-    // PUT /tasks/:id acepta chartId + stageId y maneja taskIds, WIP y status automáticamente
     await tasksStore.updateTask(task.id, { chartId, stageId: target.id });
   } catch {} finally {
     sendingToBoardId.value = null;
@@ -355,7 +353,7 @@ const handleCreate = async () => {
     }
 
     await tasksStore.createTask(payload);
-    createSuccess.value = 'Tarea creada correctamente';
+    createSuccess.value = 'Task created correctly';
     createForm.name = '';
     createForm.description = '';
     createForm.dueDate = '';
@@ -364,7 +362,7 @@ const handleCreate = async () => {
     createForm.chartId = '';
     selectedChartStages.value = [];
   } catch (error) {
-    createError.value = mapError(error, 'No se pudo crear la tarea');
+    createError.value = mapError(error, 'Could not create task');
   } finally {
     creating.value = false;
   }
@@ -378,7 +376,7 @@ const handleAdvance = async (task) => {
     await tasksStore.advanceStatus(task.id);
     await moveToPairedStage(snapshot, nextStatus);
   } catch {
-    // status stays unchanged
+
   } finally {
     advancingId.value = null;
   }
@@ -391,7 +389,7 @@ const handleComplete = async (task) => {
     await tasksStore.completeReview(task.id);
     await moveToPairedStage(snapshot, 'COMPLETED');
   } catch {
-    // ignore
+
   } finally {
     advancingId.value = null;
   }
@@ -402,7 +400,7 @@ const handleJoin = async (task) => {
     claimingId.value = task.id;
     await tasksStore.joinTask(task.id, authStore.user?.id);
   } catch {
-    // ignore
+
   } finally {
     claimingId.value = null;
   }
@@ -413,7 +411,7 @@ const handleClaimReview = async (task) => {
     claimingId.value = task.id;
     await tasksStore.claimTask(task.id, authStore.user?.id);
   } catch {
-    // ignore
+
   } finally {
     claimingId.value = null;
   }
@@ -426,7 +424,6 @@ const handleReject = async (task) => {
     await tasksStore.rejectReview(task.id);
     await moveToPairedStage(snapshot, 'IN_PROGRESS');
   } catch {
-    // ignore
   } finally {
     rejectingId.value = null;
   }
@@ -442,7 +439,6 @@ const handleDeleteConfirm = async () => {
     deleteConfirm.loading = true;
     await tasksStore.deleteTask(deleteConfirm.taskId);
   } catch {
-    // ignore
   } finally {
     deleteConfirm.loading = false;
     deleteConfirm.open = false;
@@ -473,14 +469,14 @@ onMounted(async () => {
 
 <template>
   <section class="space-y-6">
-    <PageHeader title="Tareas" subtitle="Mis tareas asignadas" />
+    <PageHeader title="Tasks" subtitle="Tasks assigned" />
 
     <div class="grid gap-6 xl:grid-cols-[1fr_360px]">
       <!-- Lista de tareas -->
       <div class="space-y-4">
         <!-- Selector de equipo -->
         <div class="flex items-center gap-3">
-          <label class="text-sm font-medium text-slate-700">Equipo:</label>
+          <label class="text-sm font-medium text-slate-700">Team:</label>
           <div class="flex flex-wrap gap-2">
             <button
               v-for="team in teamsStore.teams"
@@ -529,18 +525,18 @@ onMounted(async () => {
         </div>
 
         <AlertMessage v-if="listError" type="error" :message="listError" />
-        <LoadingState v-if="tasksStore.loading" message="Cargando tareas..." />
+        <LoadingState v-if="tasksStore.loading" message="Loading tasks..." />
 
         <div
           v-else-if="!filteredTasks.length"
           class="rounded-lg border border-slate-200 bg-white shadow-sm"
         >
           <EmptyState
-            title="Sin tareas"
+            title="No tasks"
             :description="
               statusFilter === 'ALL'
-                ? 'Crea tu primera tarea desde el formulario.'
-                : 'No hay tareas con este estado.'
+                ? 'Create your first task.'
+                : 'No tasks with this status.'
             "
           >
             <template #icon>
@@ -584,7 +580,7 @@ onMounted(async () => {
                   <template v-if="getMaxWorkers(task)">
                     ·
                     <span :class="isFull(task) ? 'font-medium text-rose-500' : 'text-slate-400'">
-                      {{ (task.assignedUserIds || []).length }}/{{ getMaxWorkers(task) }} trabajadores
+                      {{ (task.assignedUserIds || []).length }}/{{ getMaxWorkers(task) }} Workers
                     </span>
                   </template>
                 </p>
@@ -608,7 +604,7 @@ onMounted(async () => {
               ]"
             >
               Vence: {{ formatDate(task.dueDate) }}
-              <span v-if="isOverdue(task.dueDate, task.status)"> · Vencida</span>
+              <span v-if="isOverdue(task.dueDate, task.status)"> · Expired</span>
             </p>
 
             <div class="mt-3 border-t border-slate-100 pt-3">
@@ -616,10 +612,10 @@ onMounted(async () => {
               <div class="mb-2 space-y-1">
                 <div class="flex flex-wrap items-center gap-1">
                   <span class="text-xs text-slate-400">
-                    {{ task.status === 'COMPLETED' ? 'Completado por:' : 'Asignado a:' }}
+                    {{ task.status === 'COMPLETED' ? 'Completed by:' : 'Asigned to:' }}
                   </span>
                   <template v-if="isUnassigned(task)">
-                    <span class="text-xs text-slate-400">Nadie</span>
+                    <span class="text-xs text-slate-400">No one</span>
                   </template>
                   <template v-else>
                     <span
@@ -639,7 +635,7 @@ onMounted(async () => {
                   v-if="task.workerIds?.length && ['REVIEW', 'COMPLETED'].includes(task.status)"
                   class="flex flex-wrap items-center gap-1"
                 >
-                  <span class="text-xs text-slate-400">Trabajado por:</span>
+                  <span class="text-xs text-slate-400">Worked by:</span>
                   <span
                     v-for="name in (task.workerIds || []).map(userName)"
                     :key="name"
@@ -660,7 +656,7 @@ onMounted(async () => {
                   :loading="claimingId === task.id"
                   @click="handleJoin(task)"
                 >
-                  Asignarme
+                  Assign me
                 </BaseButton>
 
                 <!-- Avanzar estado: Iniciar / Revisar (solo el asignado, no en REVIEW) -->
@@ -671,7 +667,7 @@ onMounted(async () => {
                   :loading="advancingId === task.id"
                   @click="handleAdvance(task)"
                 >
-                  {{ task.status === 'PENDING' ? 'Iniciar' : 'Enviar a revisión' }}
+                  {{ task.status === 'PENDING' ? 'Start' : 'Send to review' }}
                 </BaseButton>
 
                 <!-- Tomar revisión: solo usuarios que NO trabajaron en la tarea -->
@@ -682,7 +678,7 @@ onMounted(async () => {
                   :loading="claimingId === task.id"
                   @click="handleClaimReview(task)"
                 >
-                  Asignar revisión
+                  Assign review
                 </BaseButton>
 
                 <!-- Acciones del revisor asignado -->
@@ -693,7 +689,7 @@ onMounted(async () => {
                     :loading="rejectingId === task.id"
                     @click="handleReject(task)"
                   >
-                    Regresar a progreso
+                    Return to progress
                   </BaseButton>
                   <BaseButton
                     variant="primary"
@@ -701,7 +697,7 @@ onMounted(async () => {
                     :loading="advancingId === task.id"
                     @click="handleComplete(task)"
                   >
-                    Completar
+                    Complete
                   </BaseButton>
                 </template>
 
@@ -711,7 +707,7 @@ onMounted(async () => {
                   :to="`/projects/${task.projectId}/kanban/${task.chartId}`"
                   class="inline-flex h-8 items-center rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-700 hover:bg-slate-50"
                 >
-                  Ver tablero
+                  View chart
                 </RouterLink>
 
                 <!-- Enviar al tablero: solo tareas sin stage asignado -->
@@ -723,7 +719,7 @@ onMounted(async () => {
                       @change="handleSendToBoard(task, $event.target.value)"
                       @blur="boardPickerOpen = null"
                     >
-                      <option value="">Elegir tablero…</option>
+                      <option value="">Chose chart…</option>
                       <option v-for="chart in chartsForTask(task)" :key="chart.id" :value="chart.id">
                         {{ chart.name }}
                       </option>
@@ -736,7 +732,7 @@ onMounted(async () => {
                     :loading="sendingToBoardId === task.id"
                     @click="boardPickerOpen = task.id"
                   >
-                    → Tablero
+                    → Chart
                   </BaseButton>
                 </template>
 
@@ -746,7 +742,7 @@ onMounted(async () => {
                   size="sm"
                   @click="openEdit(task)"
                 >
-                  Editar
+                  Edit
                 </BaseButton>
 
                 <button
@@ -755,7 +751,7 @@ onMounted(async () => {
                   class="danger-button h-8 px-3 text-xs"
                   @click="openDelete(task.id)"
                 >
-                  Eliminar
+                  Delete
                 </button>
                 
               </div>
@@ -770,65 +766,65 @@ onMounted(async () => {
           class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
           @submit.prevent="handleCreate"
         >
-          <h2 class="text-base font-semibold text-slate-950">Crear tarea</h2>
+          <h2 class="text-base font-semibold text-slate-950">Create tasks</h2>
 
           <div class="mt-4 space-y-2">
-            <BaseInput id="task-name" v-model="createForm.name" label="Nombre" required />
+            <BaseInput id="task-name" v-model="createForm.name" label="Name" required />
             <BaseSelect
               id="task-team"
               v-model="createForm.teamId"
-              label="Equipo"
+              label="Team"
               :options="teamOptions"
               :disabled="!teamOptions.length"
             />
             <BaseSelect
               id="task-project"
               v-model="createForm.projectId"
-              label="Proyecto"
+              label="Project"
               :options="projectOptions"
               :disabled="!projectOptions.length"
             />
             <BaseSelect
               id="task-chart"
               v-model="createForm.chartId"
-              label="Tablero (opcional)"
+              label="Chart (optional)"
               :options="[{ value: '', label: 'Sin tablero' }, ...chartOptions]"
               :disabled="!chartOptions.length || loadingChartStages"
             />
             <BaseSelect
               id="task-priority"
               v-model="createForm.priority"
-              label="Prioridad"
+              label="Priority"
               :options="PRIORITY_OPTIONS"
             />
             <BaseInput
               id="task-due"
               v-model="createForm.dueDate"
-              label="Fecha límite"
+              label="Expiry date"
               type="date"
             />
             <BaseInput
               id="task-max-workers"
               v-model="createForm.maxWorkers"
-              label="Máx. trabajadores"
+              label="Max. workers"
               type="number"
               min="1"
               max="20"
-              placeholder="Sin límite"
+              placeholder="No limit"
             />
             <BaseTextarea
               id="task-desc"
               v-model="createForm.description"
-              label="Descripción"
+              label="Description"
               :rows="3"
             />
           </div>
 
           <p v-if="!teamOptions.length" class="mt-2 text-xs text-slate-400">
-            Debes pertenecer a un equipo para crear tareas.
+            You must belong to a team to create tasks.
           </p>
           <p v-else-if="!projectOptions.length && createForm.teamId" class="mt-2 text-xs text-slate-400">
-            El equipo seleccionado no tiene proyectos activos.
+            The selected team does not have active projects.
           </p>
 
           <AlertMessage v-if="createError" type="error" :message="createError" class="mt-3" />
@@ -840,7 +836,7 @@ onMounted(async () => {
             :disabled="!createForm.teamId || !createForm.projectId"
             class="mt-4 w-full"
           >
-            Crear tarea
+            Create task
           </BaseButton>
         </form>
       </aside>
@@ -855,33 +851,33 @@ onMounted(async () => {
       >
         <div class="w-full max-w-md rounded-xl bg-white shadow-xl">
           <div class="border-b border-slate-100 px-6 py-4">
-            <h2 class="text-base font-semibold text-slate-900">Editar tarea</h2>
+            <h2 class="text-base font-semibold text-slate-900">Edit task</h2>
           </div>
           <div class="space-y-3 px-6 py-4">
-            <BaseInput v-model="editForm.name" label="Nombre" required />
+            <BaseInput v-model="editForm.name" label="Name" required />
             <BaseSelect
               v-model="editForm.priority"
-              label="Prioridad"
+              label="Priority"
               :options="PRIORITY_OPTIONS"
             />
-            <BaseInput v-model="editForm.dueDate" label="Fecha límite" type="date" />
+            <BaseInput v-model="editForm.dueDate" label="Expiry date" type="date" />
             <BaseInput
               v-model="editForm.maxWorkers"
-              label="Máx. trabajadores"
+              label="Max. workers"
               type="number"
               min="1"
               max="20"
               placeholder="Sin límite"
             />
-            <BaseTextarea v-model="editForm.description" label="Descripción" :rows="3" />
+            <BaseTextarea v-model="editForm.description" label="Description" :rows="3" />
             <AlertMessage v-if="editError" type="error" :message="editError" />
           </div>
           <div class="flex justify-end gap-2 border-t border-slate-100 px-6 py-4">
             <BaseButton variant="secondary" size="sm" :disabled="savingEdit" @click="editingTask = null">
-              Cancelar
+              Cancel
             </BaseButton>
             <BaseButton size="sm" :loading="savingEdit" :disabled="!editForm.name.trim()" @click="handleSaveEdit">
-              Guardar
+              Save
             </BaseButton>
           </div>
         </div>
@@ -890,9 +886,9 @@ onMounted(async () => {
 
     <ConfirmDialog
       :open="deleteConfirm.open"
-      title="¿Eliminar tarea?"
-      description="Esta acción eliminará la tarea permanentemente. No se puede deshacer."
-      confirm-label="Eliminar"
+      title="Delete task?"
+      description="This CANNOT be undone."
+      confirm-label="Delete"
       confirm-variant="danger"
       :loading="deleteConfirm.loading"
       @confirm="handleDeleteConfirm"
