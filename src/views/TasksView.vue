@@ -114,7 +114,7 @@ const projectName = (id) => projectsStore.projects.find((p) => p.id === id)?.nam
 
 const formatDate = (dateStr) => {
   if (!dateStr) return null;
-  return new Date(dateStr).toLocaleDateString({
+  return new Date(dateStr).toLocaleDateString('en-US',{
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -611,7 +611,7 @@ onMounted(async () => {
                 isOverdue(task.dueDate, task.status) ? 'text-red-600' : 'text-slate-400',
               ]"
             >
-              Vence: {{ formatDate(task.dueDate) }}
+              Expires on: {{ formatDate(task.dueDate) }}
               <span v-if="isOverdue(task.dueDate, task.status)"> · Expired</span>
             </p>
 
@@ -620,7 +620,7 @@ onMounted(async () => {
               <div class="mb-2 space-y-1">
                 <div class="flex flex-wrap items-center gap-1">
                   <span class="text-xs text-slate-400">
-                    {{ task.status === 'COMPLETED' ? 'Completed by:' : 'Asigned to:' }}
+                    {{ task.status === 'COMPLETED' ? 'Completed by:' : 'Assigned to:' }}
                   </span>
                   <template v-if="isUnassigned(task)">
                     <span class="text-xs text-slate-400">No one</span>

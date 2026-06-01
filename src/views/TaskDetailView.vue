@@ -120,7 +120,7 @@ const assignableMemberOptions = computed(() => {
 
 const formatDate = (dateStr) => {
   if (!dateStr) return null;
-  return new Date(dateStr).toLocaleDateString({
+  return new Date(dateStr).toLocaleDateString('en-US',{
     day: '2-digit',
     month: 'short',
     year: 'numeric',

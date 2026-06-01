@@ -92,8 +92,15 @@ const formatDate = (str) => {
   if (!str) return null;
   const date = toDate(str);
   if (!date || Number.isNaN(date.getTime())) return null;
-  return date.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+  return date.toLocaleDateString('en-US',{
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
 };
+
 
 const formatDateTime = (value) => {
   const date = toDate(value);
@@ -341,7 +348,7 @@ const handleAddComment = async () => {
     await tasksStore.postTaskComment(selectedTask.value.id, { content: commentContent.value.trim() });
     commentContent.value = '';
   } catch (error) {
-    commentError.value = error.response?.data?.message || 'No se pudo publicar el comentario';
+    commentError.value = error.response?.data?.message || 'Unable to publish comment';
   } finally {
     submittingComment.value = false;
   }
@@ -355,7 +362,7 @@ const handleDeleteComment = async (commentId) => {
     commentError.value = '';
     await tasksStore.deleteTaskComment(selectedTask.value.id, commentId);
   } catch (error) {
-    commentError.value = error.response?.data?.message || 'No se pudo eliminar el comentario';
+    commentError.value = error.response?.data?.message || 'Unable to delete comment';
   } finally {
     deletingCommentId.value = '';
   }
@@ -874,7 +881,7 @@ onMounted(async () => {
                 <button
                   type="button"
                   class="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-500"
-                  title="Eliminar etapa"
+                  title="Delete Stage"
                   :disabled="deletingStageId === stage.id"
                   @click="handleDeleteStage(stage.id)"
                 >
@@ -943,7 +950,7 @@ onMounted(async () => {
               <p class="mb-2 text-sm font-semibold text-slate-700">New stage</p>
               <input
                 v-model="newStageName"
-                placeholder="Nombre de la etapa"
+                placeholder="Stage name"
                 class="w-full rounded border border-slate-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 @keyup.enter="handleCreateStage"
                 @keyup.escape="showCreateStage = false; newStageName = ''"
@@ -1046,15 +1053,15 @@ onMounted(async () => {
             <!-- Metadatos -->
             <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
               <div>
-                <dt class="text-xs font-medium text-slate-400">Etapa</dt>
+                <dt class="text-xs font-medium text-slate-400">Stage</dt>
                 <dd class="text-slate-700">{{ stageName(selectedTask.stageId) }}</dd>
               </div>
               <div v-if="selectedTask.dueDate">
-                <dt class="text-xs font-medium text-slate-400">Fecha límite</dt>
+                <dt class="text-xs font-medium text-slate-400">Expiry date</dt>
                 <dd class="text-slate-700">{{ formatDate(selectedTask.dueDate) }}</dd>
               </div>
               <div v-if="getMaxWorkers(selectedTask)">
-                <dt class="text-xs font-medium text-slate-400">Máx. trabajadores</dt>
+                <dt class="text-xs font-medium text-slate-400">Max. workers</dt>
                 <dd class="text-slate-700">{{ getMaxWorkers(selectedTask) }}</dd>
               </div>
             </dl>
@@ -1106,7 +1113,7 @@ onMounted(async () => {
             </div>
             <div class="border-t border-slate-100 pt-4">
               <div class="mb-3 flex items-center justify-between gap-3">
-                <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Comentarios</p>
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Comments</p>
                 <span class="text-xs text-slate-500">{{ selectedTaskComments.length }}</span>
               </div>
 
@@ -1115,7 +1122,7 @@ onMounted(async () => {
                   <BaseTextarea
                     id="task-modal-comment"
                     v-model="commentContent"
-                    placeholder="Escribe un comentario"
+                    placeholder="Comment"
                     :rows="2"
                     :disabled="submittingComment"
                   />
@@ -1134,10 +1141,10 @@ onMounted(async () => {
               <AlertMessage v-if="commentError" type="error" :message="commentError" class="mt-3" />
 
               <div v-if="commentsLoading" class="mt-3 rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-500">
-                Cargando comentarios...
+                Loading comments...
               </div>
               <div v-else-if="!selectedTaskComments.length" class="mt-3 rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-500">
-                Aun no hay comentarios.
+                No comments yet.
               </div>
               <div v-else class="mt-3 max-h-64 divide-y divide-slate-100 overflow-y-auto rounded-lg border border-slate-100">
                 <div
@@ -1159,7 +1166,7 @@ onMounted(async () => {
                       :disabled="deletingCommentId === comment.id"
                       @click="handleDeleteComment(comment.id)"
                     >
-                      {{ deletingCommentId === comment.id ? 'Eliminando...' : 'Eliminar' }}
+                      {{ deletingCommentId === comment.id ? 'Deleting...' : 'Delete' }}
                     </button>
                   </div>
                   <p class="mt-2 whitespace-pre-wrap text-slate-600">{{ comment.content }}</p>
